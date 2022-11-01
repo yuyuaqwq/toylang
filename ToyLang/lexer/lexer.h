@@ -25,12 +25,14 @@ private:
 	void SkipChar(int count) noexcept;
 
 public:
+	Token LookAHead();
 	Token NextToken();
+	Token MatchToken(TokenType type);
 
 private:
 	std::string m_src;
 	size_t m_idx;
-	Token m_reserve;
+	Token m_save;
 	int m_line;
 };
 

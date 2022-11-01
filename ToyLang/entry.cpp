@@ -1,11 +1,13 @@
 ﻿#include "lexer/lexer.h"
+#include "parser/parser.h"
 
 int main() {
     using namespace lexer;
+    using namespace parser;
 
-    Lexer lexer{ "1 + 33 - 0 * (33 / 999) - 123" };
-
-    do {
+    // Lexer lexer{ "1 + 33 - 0 * (33 / 999) - 123" };
+    Lexer lexer{ "1 + 33 - 0 * 33 / 999 - 123" };
+    /*do {
         auto token = lexer.NextToken();
         if (token.Is(TokenType::kEof)) {
             break;
@@ -34,5 +36,11 @@ int main() {
             printf(")\n"); break;
         }
         }
-    } while (true);
+    } while (true);*/
+
+    Parser parser(&lexer);
+
+    auto exp = parser.ParseExp();
+
+
 }

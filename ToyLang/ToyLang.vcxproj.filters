@@ -19,6 +19,18 @@
     <Filter Include="源文件\lexer">
       <UniqueIdentifier>{01cf7595-c4ad-42db-ad32-2cd8d0662e00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\ast">
+      <UniqueIdentifier>{cadbad9f-0874-4cfa-b734-4e873598319b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\ast">
+      <UniqueIdentifier>{a680c49c-5ed6-45f2-b377-4b1b979b470a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\parser">
+      <UniqueIdentifier>{a343075a-f695-4ba0-9224-a2dde99eb9f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\parser">
+      <UniqueIdentifier>{813638e2-31b8-434f-8532-77c3c3ad5911}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="entry.cpp">
@@ -30,6 +42,12 @@
     <ClCompile Include="lexer\token.cpp">
       <Filter>源文件\lexer</Filter>
     </ClCompile>
+    <ClCompile Include="ast\exp.cpp">
+      <Filter>源文件\ast</Filter>
+    </ClCompile>
+    <ClCompile Include="parser\parser.cpp">
+      <Filter>源文件\parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexer\token.h">
@@ -37,6 +55,12 @@
     </ClInclude>
     <ClInclude Include="lexer\lexer.h">
       <Filter>头文件\lexer</Filter>
+    </ClInclude>
+    <ClInclude Include="ast\exp.h">
+      <Filter>头文件\ast</Filter>
+    </ClInclude>
+    <ClInclude Include="parser\parser.h">
+      <Filter>头文件\parser</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

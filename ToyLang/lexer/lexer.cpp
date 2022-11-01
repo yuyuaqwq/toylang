@@ -7,7 +7,7 @@ LexerException::LexerException(const char* t_msg) : std::exception(t_msg) {
 }
 
 
-Lexer::Lexer(const char* t_src) : m_src{ t_src }, m_line{ 0 }, m_idx{ 0 }, m_reserve{ 0, TokenType::kNil } {
+Lexer::Lexer(const char* t_src) : m_src{ t_src }, m_line{ 0 }, m_idx{ 0 }, m_save{ 0, TokenType::kNil } {
         
 }
 
@@ -28,14 +28,21 @@ void Lexer::SkipChar(int count) noexcept {
     m_idx += count;
 }
 
+// 前瞻下一Token
+Token Lexer::LookAHead() {
+    if (m_save.type == TokenType::kNil) {        // 如果没有前瞻过
+        m_save = NextToken();       // 获取
+    }
+    return m_save;
+}
 
 // 获取下一Token
 Token Lexer::NextToken() {
     Token token;
-    if (!m_reserve.Is(TokenType::kNil)) {        // 如果有前瞻保存的token
+    if (!m_save.Is(TokenType::kNil)) {        // 如果有前瞻保存的token
         // 返回前瞻的结果
-        token = m_reserve;
-        m_reserve.type = TokenType::kNil;
+        token = m_save;
+        m_save.type = TokenType::kNil;
         return token;
     }
 
@@ -89,6 +96,15 @@ Token Lexer::NextToken() {
     }
         
     throw LexerException("cannot parse token");
+}
+
+// 匹配下一Token
+Token Lexer::MatchToken(TokenType type) {
+    auto token = NextToken();
+    if (token.Is(type)) {
+        return token;
+    }
+    throw LexerException("cannot match token");
 }
 
 } // namespace lexer
