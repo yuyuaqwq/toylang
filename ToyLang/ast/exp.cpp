@@ -19,8 +19,16 @@ ExpType MulExp::GetType() const noexcept {
 	return ExpType::kMul;
 }
 
-MulExp::MulExp(unique_ptr<NumExp> t_leftNumExp, const std::vector<lexer::TokenType>& t_operList, std::vector<unique_ptr<NumExp>>&& t_numExoList) :
-	leftNumExp(std::move(t_leftNumExp)), operList(t_operList), numExpList(std::move(t_numExoList)) {
+MulExp::MulExp(unique_ptr<ParenExp> t_leftParenExp, const std::vector<lexer::TokenType>& t_operList, std::vector<unique_ptr<ParenExp>>&& t_parenExoList) :
+	leftParenExp(std::move(t_leftParenExp)), operList(t_operList), parenExpList(std::move(t_parenExoList)) {
+
+}
+
+ExpType ParenExp::GetType() const noexcept {
+	return ExpType::kParen;
+}
+
+ParenExp::ParenExp(unique_ptr<Exp> t_exp) : exp(std::move(t_exp)) {
 
 }
 

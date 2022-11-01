@@ -22,6 +22,7 @@ public:
 	std::unique_ptr<ast::Exp> ParseExp();
 	std::unique_ptr<ast::AddExp> ParseAddExp();
 	std::unique_ptr<ast::MulExp> ParseMulExp();
+	std::unique_ptr<ast::ParenExp> ParseParenExp();
 	std::unique_ptr<ast::NumExp> ParseNumExp();
 
 private:

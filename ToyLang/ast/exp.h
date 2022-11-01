@@ -12,6 +12,7 @@ enum class ExpType {
 	kAdd,
 	kMul,
 	kNum,
+	kParen,
 };
 
 
@@ -35,17 +36,29 @@ public:
 };
 
 
-struct NumExp;
+struct ParenExp;
 struct MulExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
-	MulExp(std::unique_ptr<NumExp> t_leftNumber, const std::vector<lexer::TokenType>& t_operList, std::vector<std::unique_ptr<NumExp>>&& t_numberList);
+	MulExp(std::unique_ptr<ParenExp> t_leftParenExp, const std::vector<lexer::TokenType>& t_operList, std::vector<std::unique_ptr<ParenExp>>&& t_parenExpList);
 
 public:
-	std::unique_ptr<NumExp> leftNumExp;
+	std::unique_ptr<ParenExp> leftParenExp;
 	std::vector<lexer::TokenType> operList;
-	std::vector<std::unique_ptr<NumExp>> numExpList;
+	std::vector<std::unique_ptr<ParenExp>> parenExpList;
+};
+
+
+struct ParenExp : public Exp {
+public:
+	virtual ExpType GetType() const noexcept;
+
+	ParenExp(std::unique_ptr<Exp> texp);
+
+public:
+	std::unique_ptr<Exp> exp;
+
 };
 
 struct NumExp : public Exp {

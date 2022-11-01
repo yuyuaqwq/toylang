@@ -4,12 +4,11 @@
 exp = addexp
 addexp = mulexp {oper2 mulexp}
 oper2 = '+' | '-'
-mulexp = numexp {oper1 numexp}
+mulexp = parenexp {oper1 parenexp}
 oper1 = '*' | '/'
+parenexp = '(' addexp ')' | numexp
 numexp = number
 */
-
-
 
 namespace parser {
 
@@ -17,6 +16,7 @@ using lexer::TokenType;
 using ast::Exp;
 using ast::AddExp;
 using ast::MulExp;
+using ast::ParenExp;
 using ast::NumExp;
 using std::unique_ptr;
 
@@ -30,7 +30,11 @@ Parser::Parser(lexer::Lexer* t_lexer) : m_lexer(t_lexer) {
 }
 
 unique_ptr<Exp> Parser::ParseExp() {
-	return ParseAddExp();
+	auto exp = ParseAddExp();
+	if (!m_lexer->LookAHead().Is(TokenType::kEof)) {
+		throw ParserException("Incomplete parsing");
+	}
+	return exp;
 }
 
 unique_ptr<AddExp> Parser::ParseAddExp() {
@@ -41,12 +45,8 @@ unique_ptr<AddExp> Parser::ParseAddExp() {
 
 	do {
 		auto token = m_lexer->LookAHead();
-		if (token.Is(TokenType::kEof)) {
-			break;
-		}
-
 		if (!token.Is(TokenType::kOpAdd) && !token.Is(TokenType::kOpSub)) {
-			throw ParserException("Invalid symbol found when parsing addition expression");
+			break;
 		}
 
 		m_lexer->NextToken();
@@ -59,10 +59,10 @@ unique_ptr<AddExp> Parser::ParseAddExp() {
 }
 
 unique_ptr<MulExp> Parser::ParseMulExp() {
-	auto leftNumExp = ParseNumExp();
+	auto leftParenExp = ParseParenExp();
 
 	std::vector<TokenType> operList;
-	std::vector<unique_ptr<NumExp>> numExpList;
+	std::vector<unique_ptr<ParenExp>> parenExpList;
 
 	do {
 		auto token = m_lexer->LookAHead();
@@ -72,11 +72,22 @@ unique_ptr<MulExp> Parser::ParseMulExp() {
 
 		m_lexer->NextToken();
 		operList.push_back(token.type);
-		numExpList.push_back(ParseNumExp());
+		parenExpList.push_back(ParseParenExp());
 
 	} while (true);
 
-	return std::make_unique<MulExp>(std::move(leftNumExp), operList, std::move(numExpList));
+	return std::make_unique<MulExp>(std::move(leftParenExp), operList, std::move(parenExpList));
+}
+
+unique_ptr<ParenExp> Parser::ParseParenExp() {
+	auto token = m_lexer->LookAHead();
+	if (!token.Is(TokenType::kSepLParen)) {		// (
+		return std::make_unique<ParenExp>(ParseNumExp());
+	}
+	m_lexer->NextToken();
+	auto exp = ParseAddExp();
+	m_lexer->MatchToken(TokenType::kSepRParen);		// )
+	return std::make_unique<ParenExp>(std::move(exp));
 }
 
 unique_ptr<NumExp> Parser::ParseNumExp() {
