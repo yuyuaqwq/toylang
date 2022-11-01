@@ -9,8 +9,9 @@
 namespace ast {
 
 enum class ExpType {
-	kAddExp,
-	kMulExp
+	kAdd,
+	kMul,
+	kNum,
 };
 
 
@@ -21,7 +22,6 @@ public:
 
 
 struct MulExp;
-
 struct AddExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
@@ -35,16 +35,26 @@ public:
 };
 
 
+struct NumExp;
 struct MulExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
-	MulExp(int t_leftNumber, const std::vector<lexer::TokenType>& t_operList, const std::vector<int>& t_numberList);
+	MulExp(std::unique_ptr<NumExp> t_leftNumber, const std::vector<lexer::TokenType>& t_operList, std::vector<std::unique_ptr<NumExp>>&& t_numberList);
 
 public:
-	int leftNumber;
+	std::unique_ptr<NumExp> leftNumExp;
 	std::vector<lexer::TokenType> operList;
-	std::vector<int> numberList;
+	std::vector<std::unique_ptr<NumExp>> numExpList;
+};
+
+struct NumExp : public Exp {
+public:
+	virtual ExpType GetType() const noexcept;
+	NumExp(int t_num);
+
+public:
+	int num;
 };
 
 } // namespace ast

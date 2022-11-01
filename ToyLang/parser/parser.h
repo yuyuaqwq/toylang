@@ -20,11 +20,9 @@ public:
 
 public:
 	std::unique_ptr<ast::Exp> ParseExp();
-
 	std::unique_ptr<ast::AddExp> ParseAddExp();
-
 	std::unique_ptr<ast::MulExp> ParseMulExp();
-
+	std::unique_ptr<ast::NumExp> ParseNumExp();
 
 private:
 	lexer::Lexer* m_lexer;
