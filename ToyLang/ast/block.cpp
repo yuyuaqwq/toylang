@@ -1,5 +1,7 @@
 #include "block.h"
 
+#include "ast/stat.h"
+
 namespace ast {
 
 using std::unique_ptr;

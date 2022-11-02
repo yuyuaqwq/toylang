@@ -14,6 +14,7 @@ enum class ExpType {
 	kNumber,
 	kString,
 
+
 	kBinaOp,
 	kName,
 	kFuncCall,
@@ -36,6 +37,8 @@ struct BoolExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
+	BoolExp(bool t_value);
+
 public:
 	bool value;
 };
@@ -44,6 +47,9 @@ public:
 struct NumberExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
+
+	NumberExp(int t_value);
+
 public:
 	int value;
 };
@@ -53,6 +59,8 @@ struct StringExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
+	StringExp(const std::string& t_value);
+
 public:
 	std::string value;
 
@@ -61,6 +69,8 @@ public:
 struct BinaOpExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
+
+	BinaOpExp(std::unique_ptr<Exp> t_leftExp, lexer::TokenType t_oper, std::unique_ptr<Exp> t_rightExp);
 
 public:
 	std::unique_ptr<Exp> leftExp;
@@ -72,6 +82,8 @@ struct NameExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
+	NameExp(const std::string& t_name);
+
 public:
 	std::string name;
 };
@@ -80,8 +92,13 @@ struct FuncCallExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
+	FuncCallExp(const std::string& t_name, std::vector<std::unique_ptr<ast::Exp>>&& t_parList);
+
 public:
 	std::string name;
+
+	std::vector<std::unique_ptr<ast::Exp>> parList;
+
 };
 
 

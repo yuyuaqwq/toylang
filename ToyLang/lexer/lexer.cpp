@@ -166,11 +166,11 @@ Token Lexer::NextToken() {
     }
 
     // Number
-    if (c >= '0' || c <= '9') {
+    if (IsDigit(c)) {
         token.type = TokenType::kNumber;
         token.str.push_back(c);
         while (c = NextChar()) {
-            if (c >= '0' && c <= '9') {
+            if (IsDigit(c)) {
                 token.str.push_back(c);
             }
             else {
@@ -183,7 +183,6 @@ Token Lexer::NextToken() {
 
     // String
     if (c == '\"') {
-        char c = NextChar();
         size_t beginPos = m_idx;
         size_t endPos = -1;
         if (c == '\'') {
@@ -194,7 +193,7 @@ Token Lexer::NextToken() {
         }
 
         if (endPos == -1) {
-            LexerException("incorrect short string");
+            throw LexerException("incorrect short string");
         }
 
         m_idx = endPos + 1;
@@ -208,7 +207,7 @@ Token Lexer::NextToken() {
     if (c == '_' || IsAlpha(c)) {
         
         std::string ident;
-        size_t beginPos = m_idx;
+        size_t beginPos = m_idx - 1;
         char c = NextChar();
         while (c && (c == '_' || IsAlpha(c) || IsDigit(c))) {
             c = NextChar();
