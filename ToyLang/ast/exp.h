@@ -9,10 +9,14 @@
 namespace ast {
 
 enum class ExpType {
-	kAdd,
-	kMul,
-	kNum,
-	kParen,
+	kNull,
+	kBool,
+	kNumber,
+	kString,
+
+	kBinaOp,
+	kName,
+	kFuncCall,
 };
 
 
@@ -22,53 +26,65 @@ public:
 };
 
 
-struct MulExp;
-struct AddExp : public Exp {
+struct NullExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
-
-	AddExp(std::unique_ptr<MulExp> t_leftMulExp, const std::vector<lexer::TokenType>& t_operList, std::vector<std::unique_ptr<MulExp>>&& t_mulExpList);
-
-public:
-	std::unique_ptr<MulExp> leftMulExp;
-	std::vector<lexer::TokenType> operList;
-	std::vector<std::unique_ptr<MulExp>> mulExpList;
 };
 
 
-struct ParenExp;
-struct MulExp : public Exp {
+struct BoolExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
-	MulExp(std::unique_ptr<ParenExp> t_leftParenExp, const std::vector<lexer::TokenType>& t_operList, std::vector<std::unique_ptr<ParenExp>>&& t_parenExpList);
-
 public:
-	std::unique_ptr<ParenExp> leftParenExp;
-	std::vector<lexer::TokenType> operList;
-	std::vector<std::unique_ptr<ParenExp>> parenExpList;
+	bool value;
 };
 
 
-struct ParenExp : public Exp {
+struct NumberExp : public Exp {
+public:
+	virtual ExpType GetType() const noexcept;
+public:
+	int value;
+};
+
+
+struct StringExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
 
-	ParenExp(std::unique_ptr<Exp> texp);
-
 public:
-	std::unique_ptr<Exp> exp;
+	std::string value;
 
 };
 
-struct NumExp : public Exp {
+struct BinaOpExp : public Exp {
 public:
 	virtual ExpType GetType() const noexcept;
-	NumExp(int t_num);
 
 public:
-	int num;
+	std::unique_ptr<Exp> leftExp;
+	lexer::TokenType oper;
+	std::unique_ptr<Exp> rightExp;
 };
+
+struct NameExp : public Exp {
+public:
+	virtual ExpType GetType() const noexcept;
+
+public:
+	std::string name;
+};
+
+struct FuncCallExp : public Exp {
+public:
+	virtual ExpType GetType() const noexcept;
+
+public:
+	std::string name;
+};
+
+
 
 } // namespace ast
 

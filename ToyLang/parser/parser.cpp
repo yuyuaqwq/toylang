@@ -12,13 +12,13 @@ numexp = number
 
 namespace parser {
 
-using lexer::TokenType;
-using ast::Exp;
-using ast::AddExp;
-using ast::MulExp;
-using ast::ParenExp;
-using ast::NumExp;
 using std::unique_ptr;
+using std::vector;
+
+using lexer::TokenType;
+
+using namespace ast;
+
 
 ParserException::ParserException(const char* t_msg) : std::exception(t_msg) {
 
@@ -29,71 +29,88 @@ Parser::Parser(lexer::Lexer* t_lexer) : m_lexer(t_lexer) {
 
 }
 
-unique_ptr<Exp> Parser::ParseExp() {
-	auto exp = ParseAddExp();
-	if (!m_lexer->LookAHead().Is(TokenType::kEof)) {
-		throw ParserException("Incomplete parsing");
-	}
-	return exp;
+unique_ptr<Block> Parser::ParseSource() {
+	return ParseBlock();
 }
 
-unique_ptr<AddExp> Parser::ParseAddExp() {
-	auto leftMulExp = ParseMulExp();
+unique_ptr<Block> Parser::ParseBlock() {
+	m_lexer->MatchToken(TokenType::kSepLCurly);
 
-	std::vector<TokenType> operList;
-	std::vector<unique_ptr<MulExp>> mulExpList;
+	vector<unique_ptr<Stat>> statList;
 
-	do {
-		auto token = m_lexer->LookAHead();
-		if (!token.Is(TokenType::kOpAdd) && !token.Is(TokenType::kOpSub)) {
-			break;
-		}
-
-		m_lexer->NextToken();
-		operList.push_back(token.type);
-		mulExpList.push_back(ParseMulExp());
-
-	} while (true);
-
-	return std::make_unique<AddExp>(std::move(leftMulExp), operList, std::move(mulExpList));
-}
-
-unique_ptr<MulExp> Parser::ParseMulExp() {
-	auto leftParenExp = ParseParenExp();
-
-	std::vector<TokenType> operList;
-	std::vector<unique_ptr<ParenExp>> parenExpList;
-
-	do {
-		auto token = m_lexer->LookAHead();
-		if (!token.Is(TokenType::kOpMul) && !token.Is(TokenType::kOpDiv)) {
-			break;
-		}
-
-		m_lexer->NextToken();
-		operList.push_back(token.type);
-		parenExpList.push_back(ParseParenExp());
-
-	} while (true);
-
-	return std::make_unique<MulExp>(std::move(leftParenExp), operList, std::move(parenExpList));
-}
-
-unique_ptr<ParenExp> Parser::ParseParenExp() {
 	auto token = m_lexer->LookAHead();
-	if (!token.Is(TokenType::kSepLParen)) {		// (
-		return std::make_unique<ParenExp>(ParseNumExp());
+	while (!token.Is(TokenType::kSepRCurly)) {
+		statList.push_back(ParseStat());
 	}
-	m_lexer->NextToken();
-	auto exp = ParseAddExp();
-	m_lexer->MatchToken(TokenType::kSepRParen);		// )
-	return std::make_unique<ParenExp>(std::move(exp));
+
+	m_lexer->MatchToken(TokenType::kSepRCurly);
+
+	return std::make_unique<Block>(std::move(statList));
 }
 
-unique_ptr<NumExp> Parser::ParseNumExp() {
-	auto token = m_lexer->MatchToken(TokenType::kNumber);
-	int num = atoi(token.str.c_str());
-	return std::make_unique<NumExp>(num);
+unique_ptr<Stat> Parser::ParseStat() {
+	auto token = m_lexer->LookAHead();
+
+	switch (token.type) {
+		case TokenType::kKwFunc: {
+			return ParseFuncDefStat();
+		}
+		case TokenType::kKwIf: {
+			return ParseIfStat();
+		}
+	}
+	
+
+	
 }
+
+unique_ptr<FuncDefStat> Parser::ParseFuncDefStat() {
+	m_lexer->NextToken();
+	auto funcName = m_lexer->MatchToken(TokenType::kIdent).str;
+	auto parList = ParseParList();
+	auto block = ParseBlock();
+	return std::make_unique<ast::FuncDefStat>(funcName, parList, block);
+}
+
+std::vector<std::string> Parser::ParseParList() {
+	std::vector<std::string> parList;
+	if (m_lexer->LookAHead().Is(TokenType::kIdent)) {
+		do {
+			if (!m_lexer->LookAHead().Is(TokenType::kSepComma)) {
+				break;
+			}
+			m_lexer->NextToken();
+			parList.push_back(m_lexer->MatchToken(TokenType::kIdent).str);
+		} while (true);
+	}
+	
+	return parList;
+}
+
+unique_ptr<IfStat> Parser::ParseIfStat() {
+	m_lexer->NextToken();
+	auto exp = ParseExp();
+	auto block = ParseBlock();
+
+	vector<unique_ptr<ElifStat>> elifStatList;
+
+	auto token = m_lexer->LookAHead();
+	while (token.Is(TokenType::kKwElif)) {
+		elifStatList.push_back(ParseElifStat());
+	}
+	
+	unique_ptr<ElseStat> elseStat;
+	if (token.Is(TokenType::kKwElse)) {
+		elseStat = std::move(ParseElseStat());
+	}
+
+	return std::make_unique<ast::IfStat>();
+}
+
+
+unique_ptr<Exp> Parser::ParseExp() {
+
+}
+
 
 } // namespace parser

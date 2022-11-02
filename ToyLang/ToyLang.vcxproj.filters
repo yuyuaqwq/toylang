@@ -48,6 +48,12 @@
     <ClCompile Include="parser\parser.cpp">
       <Filter>源文件\parser</Filter>
     </ClCompile>
+    <ClCompile Include="ast\stat.cpp">
+      <Filter>源文件\ast</Filter>
+    </ClCompile>
+    <ClCompile Include="ast\block.cpp">
+      <Filter>源文件\ast</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexer\token.h">
@@ -61,6 +67,12 @@
     </ClInclude>
     <ClInclude Include="parser\parser.h">
       <Filter>头文件\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="ast\stat.h">
+      <Filter>头文件\ast</Filter>
+    </ClInclude>
+    <ClInclude Include="ast\block.h">
+      <Filter>头文件\ast</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

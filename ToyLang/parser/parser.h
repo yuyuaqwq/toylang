@@ -4,6 +4,8 @@
 #include <memory>
 
 #include "lexer/lexer.h"
+#include "ast/block.h"
+#include "ast/stat.h"
 #include "ast/exp.h"
 
 namespace parser {
@@ -19,11 +21,13 @@ public:
 	Parser(lexer::Lexer* t_lexer);
 
 public:
-	std::unique_ptr<ast::Exp> ParseExp();
-	std::unique_ptr<ast::AddExp> ParseAddExp();
-	std::unique_ptr<ast::MulExp> ParseMulExp();
-	std::unique_ptr<ast::ParenExp> ParseParenExp();
-	std::unique_ptr<ast::NumExp> ParseNumExp();
+	std::unique_ptr<ast::Block> ParseSource();
+	std::unique_ptr<ast::Block> ParseBlock();
+	std::unique_ptr<ast::Stat> ParseStat();
+	std::vector<std::string> ParseParList();
+
+	unique_ptr<ast::FuncDefStat> ParseFuncDefStat();
+	unique_ptr<ast::IfStat> ParseIfStat();
 
 private:
 	lexer::Lexer* m_lexer;

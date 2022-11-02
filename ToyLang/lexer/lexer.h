@@ -4,7 +4,7 @@
 #include <string>
 #include <exception>
 
-#include <lexer/token.h>
+#include "lexer/token.h"
 
 namespace lexer {
 
@@ -23,6 +23,8 @@ public:
 private:
 	char NextChar() noexcept;
 	void SkipChar(int count) noexcept;
+	bool TestStr(const std::string& str);
+	bool TestChar(char c);
 
 public:
 	Token LookAHead();
