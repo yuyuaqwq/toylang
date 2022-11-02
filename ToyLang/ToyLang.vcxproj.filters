@@ -31,6 +31,18 @@
     <Filter Include="源文件\parser">
       <UniqueIdentifier>{813638e2-31b8-434f-8532-77c3c3ad5911}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\vm">
+      <UniqueIdentifier>{c14978d4-63ac-43d1-bab2-49e5e08fa45c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\vm">
+      <UniqueIdentifier>{e2b72740-6467-450d-b319-9fc91aae476c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\codegener">
+      <UniqueIdentifier>{6734de7c-1355-48ca-b57e-cd25fe278f89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\codegener">
+      <UniqueIdentifier>{85380f83-f5e9-4c78-bed8-c21b7e993ac0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="entry.cpp">
@@ -54,6 +66,18 @@
     <ClCompile Include="ast\block.cpp">
       <Filter>源文件\ast</Filter>
     </ClCompile>
+    <ClCompile Include="vm\instr.cpp">
+      <Filter>源文件\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="vm\vm.cpp">
+      <Filter>源文件\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="codegener\codegener.cpp">
+      <Filter>源文件\codegener</Filter>
+    </ClCompile>
+    <ClCompile Include="vm\value.cpp">
+      <Filter>源文件\vm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexer\token.h">
@@ -73,6 +97,18 @@
     </ClInclude>
     <ClInclude Include="ast\block.h">
       <Filter>头文件\ast</Filter>
+    </ClInclude>
+    <ClInclude Include="vm\instr.h">
+      <Filter>头文件\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="vm\vm.h">
+      <Filter>头文件\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="codegener\codegener.h">
+      <Filter>头文件\codegener</Filter>
+    </ClInclude>
+    <ClInclude Include="vm\value.h">
+      <Filter>头文件\vm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
