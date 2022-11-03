@@ -83,9 +83,9 @@ public:
 		Emit(OpcodeType::kDiv);
 	}
 
-	void EmitCall(uint32_t sk) {
+	void EmitCall(uint32_t sv) {
 		Emit(OpcodeType::kCall);
-		EmitU32(sk);
+		EmitU32(sv);
 	}
 
 	void EmitRet() {

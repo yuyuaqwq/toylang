@@ -21,9 +21,8 @@ public:
 
 private:
 	uint32_t m_pc;
-	InstrSection m_instrSection;
 	std::vector<std::unique_ptr<Value>> m_stackSection;
-	std::vector<std::string> m_constSection;
+	
 };
 
 } // namespace vm 

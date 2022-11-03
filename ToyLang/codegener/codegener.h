@@ -8,6 +8,7 @@
 
 #include "vm/instr.h"
 #include "vm/value.h"
+#include "vm/vm.h"
 
 #include "ast/block.h"
 #include "ast/stat.h"
@@ -26,7 +27,7 @@ public:
 
 class CodeGener {
 public:
-	CodeGener(vm::InstrSection* t_instrSection): m_instrSection(t_instrSection), m_level(0), m_varCount(0), m_varTable(1) {
+	CodeGener(): m_level(0), m_varCount(0), m_varTable(1) {
 
 	}
 
@@ -69,6 +70,11 @@ public:
 		return varIdx;
 	}
 
+	void Generate(vm::VM* t_vm, ast::Block* block) {
+		for (auto& stat : block->statList) {
+			GenerateStat(stat.get());
+		}
+	}
 
 	void GenerateBlock(ast::Block* block) {
 		EntryScope();
@@ -89,30 +95,60 @@ public:
 			GenerateFuncDefStat(static_cast<ast::FuncDefStat*>(stat));
 			break;
 		}
+		case ast::StatType::kAssign: {
+			GenerateAssignStat(static_cast<ast::AssignStat*>(stat));
+			break;
+		}
+		case ast::StatType::kNewVar: {
+			GenerateNewVarStat(static_cast<ast::NewVarStat*>(stat));
+			break;
+		}
 		default:
 			break;
 		}
 	}
 
 	void GenerateFuncDefStat(ast::FuncDefStat* stat) {
-		if (m_funcMap.find(stat->funcName) != m_funcMap.end()) {
+		auto& varScope = m_varTable[m_level];
+		if (varScope.find(stat->funcName) != varScope.end()) {
 			throw CodeGenerException("function redefinition");
 		}
-		m_constTable.push_back(std::make_unique<vm::FunctionValue>(0, stat->parList.size()));
-		int idx = m_constTable.size() - 1;
-		m_funcMap.insert(std::make_pair(stat->funcName, idx));
+		m_constTable.push_back(std::make_unique<vm::FunctionBodyValue>(stat->parList.size()));
+		int constIdx = m_constTable.size() - 1;
+		
+		auto varIdx = AllocVar();
+		varScope.insert(std::make_pair(stat->funcName, varIdx));
 
+		// 将函数体交给虚拟机去加载，虚拟机发现加载的常量是函数体，只要生成函数原型就可以了
+		m_curFunc->instrSect.EmitPushK(constIdx);
+		m_curFunc->instrSect.EmitPopV(varIdx);
+
+		// 备份当前环境，以新环境去生成函数指令(函数内的作用域不能捕获函数外作用域的符号)
+		auto saveLevel = m_level;
 		auto saveVarCount = m_varCount;
+		auto saveVarTable = std::move(m_varTable);
+		m_level = 0;
 		m_varCount = 0;
 
-		// 需要生成将栈中参数保存到局部变量表的代码
+		// 需要生成将栈中参数保存到变量表的指令
+		m_varCount += stat->parList.size();
+		// ...
+		
+		
 
 
-		// 这里也不能直接解析，现在是在别的函数的指令流中，现在的建议是将指令流封装到一个函数对象中，最外层也当成一个函数处理，类似Lua。
+		auto savefunc = m_curFunc;
+
+		m_curFunc = m_constTable[constIdx]->GetFunctionBody();
+
 		GenerateBlock(stat->block.get());
 
+		m_curFunc = savefunc;
 
+		// 恢复环境
+		m_varTable = std::move(saveVarTable);
 		m_varCount = saveVarCount;
+		m_level = saveLevel;
 	}
 
 
@@ -122,7 +158,7 @@ public:
 	// 每次call时，将当前该字段的值push到栈中，并且将该字段置为当前局部变量表的最顶部
 	// ret时就从栈中恢复这个字段
 
-	// 函数定义指令就暂时将m_varCount置0，这样子函数定义中的块被解析时，局部变量索引又是从0开始的，返回后恢复
+	// 函数定义指令就暂时将m_varCount置0，这样子函数定义中的块被解析时，变量索引又是从0开始的，返回后恢复
 
 	void GenerateNewVarStat(ast::NewVarStat* stat) {
 		auto& varScope = m_varTable[m_level];
@@ -132,7 +168,7 @@ public:
 		auto varIdx = AllocVar();
 		varScope.insert(std::make_pair(stat->varName, varIdx));
 		GenerateExp(stat->exp.get());		// 生成表达式计算指令，最终结果会到栈顶
-		m_instrSection->EmitPopV(varIdx);	// 弹出到局部变量中
+		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到局部变量中
 	}
 
 	void GenerateAssignStat(ast::AssignStat* stat) {
@@ -141,7 +177,7 @@ public:
 			throw CodeGenerException("var not defined");
 		}
 		GenerateExp(stat->exp.get());		// 表达式压栈
-		m_instrSection->EmitPopV(varIdx);	// 弹出到局部变量中
+		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到局部变量中
 	}
 
 	void GenerateExp(ast::Exp* exp) {
@@ -158,7 +194,7 @@ public:
 			else {
 				idx = it->second;
 			}
-			m_instrSection->EmitPushK(idx);
+			m_curFunc->instrSect.EmitPushK(idx);
 			break;
 		}
 		case ast::ExpType::kBool: {
@@ -173,7 +209,7 @@ public:
 			else {
 				idx = it->second;
 			}
-			m_instrSection->EmitPushK(idx);
+			m_curFunc->instrSect.EmitPushK(idx);
 			break;
 		}
 		case ast::ExpType::kNumber: {
@@ -188,7 +224,7 @@ public:
 			else {
 				idx = it->second;
 			}
-			m_instrSection->EmitPushK(idx);
+			m_curFunc->instrSect.EmitPushK(idx);
 			break;
 		}
 		case ast::ExpType::kString: {
@@ -203,7 +239,7 @@ public:
 			else {
 				idx = it->second;
 			}
-			m_instrSection->EmitPushK(idx);
+			m_curFunc->instrSect.EmitPushK(idx);
 			break;
 		}
 		case ast::ExpType::kName: {
@@ -215,7 +251,7 @@ public:
 				throw CodeGenerException("var not defined");
 			}
 
-			m_instrSection->EmitPushV(varIdx);
+			m_curFunc->instrSect.EmitPushV(varIdx);
 		}
 		case ast::ExpType::kBinaOp: {
 			auto binaOpExp = static_cast<ast::BinaOpExp*>(exp);
@@ -227,31 +263,31 @@ public:
 			// 生成运算指令
 			switch (binaOpExp->oper) {
 			case lexer::TokenType::kOpAdd:
-				m_instrSection->EmitAdd();
+				m_curFunc->instrSect.EmitAdd();
 				break;
 			case lexer::TokenType::kOpSub:
-				m_instrSection->EmitSub();
+				m_curFunc->instrSect.EmitSub();
 				break;
 			case lexer::TokenType::kOpMul:
-				m_instrSection->EmitMul();
+				m_curFunc->instrSect.EmitMul();
 				break;
 			case lexer::TokenType::kOpDiv:
-				m_instrSection->EmitDiv();
+				m_curFunc->instrSect.EmitDiv();
 				break;
 			case lexer::TokenType::kOpEq:
-				m_instrSection->EmitEq();
+				m_curFunc->instrSect.EmitEq();
 				break;
 			case lexer::TokenType::kOpLt:
-				m_instrSection->EmitLt();
+				m_curFunc->instrSect.EmitLt();
 				break;
 			case lexer::TokenType::kOpLe:
-				m_instrSection->EmitLe();
+				m_curFunc->instrSect.EmitLe();
 				break;
 			case lexer::TokenType::kOpGt:
-				m_instrSection->EmitGt();
+				m_curFunc->instrSect.EmitGt();
 				break;
 			case lexer::TokenType::kOpGe:
-				m_instrSection->EmitGe();
+				m_curFunc->instrSect.EmitGe();
 				break;
 			default:
 				throw CodeGenerException("Unrecognized binary operator");
@@ -260,22 +296,23 @@ public:
 		}
 		case ast::ExpType::kFuncCall: {
 			auto funcCallExp = static_cast<ast::FuncCallExp*>(exp);
-			auto func = m_funcMap.find(funcCallExp->name);
-			if (func == m_funcMap.end()) {
+
+			auto funcIdx = GetVar(funcCallExp->name);
+			if (funcIdx == -1) {
 				throw CodeGenerException("Function not defined");
 			}
 
-			if (funcCallExp->parList.size() < m_constTable[func->second]->GetFunction()->parCount) {
-				throw CodeGenerException("Wrong number of parameters passed during function call");
-			}
+			//if (funcCallExp->parList.size() < m_constTable[]->GetFunctionBody()->parCount) {
+			//	throw CodeGenerException("Wrong number of parameters passed during function call");
+			//}
 
 			for (auto& parexp : funcCallExp->parList) {
-				// 参数入栈，由函数定义将栈中参数放到局部变量表中
+				// 参数入栈，由函数定义将栈中参数放到变量表中
 				GenerateExp(parexp.get());
 			}
 			
-			// 函数索引入栈
-			m_instrSection->EmitCall(func->second);
+			// 函数在变量表的索引
+			m_curFunc->instrSect.EmitCall(funcIdx);
 		}
 		default:
 			break;
@@ -285,10 +322,8 @@ public:
 
 
 private:
-	vm::InstrSection* m_instrSection;
-	
-	std::map<std::string, uint32_t> m_funcMap;		// 全局函数映射，key为function在全局常量表的索引
-	
+	vm::FunctionBodyValue* m_curFunc;		// 当前生成函数
+
 	std::map<vm::Value&, uint32_t> m_constMap;
 	std::vector<std::unique_ptr<vm::Value>> m_constTable;		// 全局常量表
 
