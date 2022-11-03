@@ -10,6 +10,7 @@ enum class ValueType {
 	kBool,
 	kNumber,
 	kString,
+	kFunction,
 };
 
 
@@ -18,6 +19,12 @@ public:
 	virtual ValueType GetType() const noexcept = 0;
 
 	bool operator<(const Value& value) const;
+
+	FunctionValue* GetFunction() {
+		return static_cast<FunctionValue*>(this);
+	}
+
+
 };
 
 class NullValue :public Value {
@@ -70,6 +77,20 @@ public:
 	std::string value;
 };
 
+class FunctionValue : public Value {
+public:
+	virtual ValueType GetType() const noexcept {
+		return ValueType::kFunction;
+	}
+
+	FunctionValue(uint32_t t_addr, uint32_t t_parCount) : addr(t_addr), parCount(t_parCount) {
+
+	}
+
+public:
+	uint32_t addr;
+	uint32_t parCount;
+};
 
 } // namespace vm
 

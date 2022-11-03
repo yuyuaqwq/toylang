@@ -8,11 +8,9 @@ namespace vm {
 enum class OpcodeType {
 	kStop = 0,
 	kNop,
-	kMovK,
-	kMovR,
 	kPushK,
-	kPushR,
-	kPopR,
+	kPushV,
+	kPopV,
 	kAdd,
 	kSub,
 	kMul,
@@ -24,6 +22,7 @@ enum class OpcodeType {
 	kGe,
 	kLt,
 	kLe,
+	kJc,
 	kJmp,
 };
 
@@ -53,21 +52,9 @@ public:
 		Emit(OpcodeType::kNop);
 	}
 
-	void EmitMovK(uint8_t dr, uint32_t sk) {
-		Emit(OpcodeType::kMovK);
-		EmitU8(dr);
-		EmitU32(sk);
-	}
-
-	void EmitMovR(uint8_t dr, uint8_t sr) {
-		Emit(OpcodeType::kMovR);
-		EmitU8(dr);
-		EmitU8(sr);
-	}
-
-	void EmitPushR(uint8_t sr) {
-		Emit(OpcodeType::kPushR);
-		EmitU8(sr);
+	void EmitPushV(uint32_t sv) {
+		Emit(OpcodeType::kPushV);
+		EmitU32(sv);
 	}
 
 	void EmitPushK(uint32_t sk) {
@@ -75,9 +62,9 @@ public:
 		EmitU32(sk);
 	}
 
-	void EmitPopR(uint8_t dr) {
-		Emit(OpcodeType::kPopR);
-		EmitU8(dr);
+	void EmitPopV(uint32_t dv) {
+		Emit(OpcodeType::kPopV);
+		EmitU32(dv);
 	}
 
 	void EmitAdd() {
@@ -96,8 +83,9 @@ public:
 		Emit(OpcodeType::kDiv);
 	}
 
-	void EmitCall() {
+	void EmitCall(uint32_t sk) {
 		Emit(OpcodeType::kCall);
+		EmitU32(sk);
 	}
 
 	void EmitRet() {
@@ -124,11 +112,15 @@ public:
 		Emit(OpcodeType::kLe);
 	}
 
+	void EmitJc(uint32_t i) {
+		Emit(OpcodeType::kJc);
+		EmitU32(i);
+	}
+
 	void EmitJmp(uint32_t i) {
 		Emit(OpcodeType::kJmp);
 		EmitU32(i);
 	}
-
 
 private:
 	std::vector<uint8_t> m_container;
