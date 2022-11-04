@@ -10,7 +10,6 @@
 #include "vm/value.h"
 #include "vm/vm.h"
 
-#include "ast/block.h"
 #include "ast/stat.h"
 #include "ast/exp.h"
 
@@ -27,9 +26,10 @@ public:
 
 class CodeGener {
 public:
-	CodeGener(): m_level(0), m_varCount(0), m_varTable(1) {
-
+	CodeGener(vm::VM* t_vm) : m_vm(t_vm), m_level(0), m_varCount(0), m_varTable(1) {
+		m_curFunc = &m_vm->m_mainFunc;
 	}
+
 
 	void EntryScope() {
 		m_level++;
@@ -55,28 +55,50 @@ public:
 		m_varCount -= count;
 	}
 
-
 	uint32_t GetVar(std::string name) {
 		uint32_t varIdx = -1;
-		// 就近找局部变量
+		// 就近找变量
+		auto i = m_level;
 		do {
-			auto& varScope = m_varTable[m_level];
+			auto& varScope = m_varTable[i];
 			auto it = varScope.find(name);
 			if (it != varScope.end()) {
 				varIdx = it->second;
 			}
-		} while (m_level--);
+		} while (i--);
 
 		return varIdx;
 	}
 
-	void Generate(vm::VM* t_vm, ast::Block* block) {
+
+	void RegistryFunctionBridge(std::string funcName, vm::FunctionBridgeCall funcAddr) {
+		auto& varScope = m_varTable[m_level];
+		if (varScope.find(funcName) != varScope.end()) {
+			throw CodeGenerException("function redefinition");
+		}
+		m_constTable.push_back(std::make_unique<vm::FunctionBridgeValue>(funcAddr));
+		int constIdx = m_constTable.size() - 1;
+
+		auto varIdx = AllocVar();
+		varScope.insert(std::make_pair(funcName, varIdx));
+
+		// 生成将函数放到变量表中的代码
+		// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
+		m_curFunc->instrSect.EmitPushK(constIdx);
+		m_curFunc->instrSect.EmitPopV(varIdx);
+	}
+
+
+	void Generate(ast::BlockStat* block) {
+		
 		for (auto& stat : block->statList) {
 			GenerateStat(stat.get());
 		}
+		m_vm->m_constSect = std::move(m_constTable);
+		m_curFunc->instrSect.EmitStop();
 	}
 
-	void GenerateBlock(ast::Block* block) {
+	void GenerateBlock(ast::BlockStat* block) {
 		EntryScope();
 		for (auto& stat : block->statList) {
 			GenerateStat(stat.get());
@@ -87,6 +109,10 @@ public:
 	void GenerateStat(ast::Stat* stat) {
 		switch (stat->GetType())
 		{
+		case ast::StatType::kBlock: {
+			GenerateBlock(static_cast<ast::BlockStat*>(stat));
+			break;
+		}
 		case ast::StatType::kExp: {
 			GenerateExp(static_cast<ast::ExpStat*>(stat)->exp.get());
 			break;
@@ -119,33 +145,35 @@ public:
 		auto varIdx = AllocVar();
 		varScope.insert(std::make_pair(stat->funcName, varIdx));
 
-		// 将函数体交给虚拟机去加载，虚拟机发现加载的常量是函数体，只要生成函数原型就可以了
+		// 生成将函数放到变量表中的代码
+		// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
 		m_curFunc->instrSect.EmitPushK(constIdx);
 		m_curFunc->instrSect.EmitPopV(varIdx);
-
-		// 备份当前环境，以新环境去生成函数指令(函数内的作用域不能捕获函数外作用域的符号)
+		
+		
+		// 备份当前环境，以新环境去生成函数指令(函数是独立的作用域，不能捕获函数外作用域的符号)
 		auto saveLevel = m_level;
 		auto saveVarCount = m_varCount;
 		auto saveVarTable = std::move(m_varTable);
-		m_level = 0;
-		m_varCount = 0;
-
-		// 需要生成将栈中参数保存到变量表的指令
-		m_varCount += stat->parList.size();
-		// ...
-		
-		
-
-
 		auto savefunc = m_curFunc;
 
+		m_level = 0;
+		m_varCount = 0;
+		m_varTable.resize(1);
 		m_curFunc = m_constTable[constIdx]->GetFunctionBody();
 
-		GenerateBlock(stat->block.get());
+		for (int i = 0; i < m_curFunc->parCount; i++) {
+			m_varTable[m_level].insert(std::make_pair(stat->parList[i], AllocVar()));
+		}
 
-		m_curFunc = savefunc;
+		auto block = stat->block.get();
+		for (auto& stat : block->statList) {
+			GenerateStat(stat.get());
+		}
+		m_curFunc->instrSect.EmitRet();
 
 		// 恢复环境
+		m_curFunc = savefunc;
 		m_varTable = std::move(saveVarTable);
 		m_varCount = saveVarCount;
 		m_level = saveLevel;
@@ -186,7 +214,7 @@ public:
 		case ast::ExpType::kNull: {
 			vm::NullValue null;
 			uint32_t idx;
-			auto it = m_constMap.find(null);
+			auto it = m_constMap.find(&null);
 			if (it == m_constMap.end()) {
 				m_constTable.push_back(std::make_unique<vm::NullValue>());
 				idx = m_constTable.size() - 1;
@@ -201,7 +229,7 @@ public:
 			auto boolexp = static_cast<ast::BoolExp*>(exp);
 			uint32_t idx;
 			vm::BoolValue boolv(boolexp->value);
-			auto it = m_constMap.find(boolv);
+			auto it = m_constMap.find(&boolv);
 			if (it == m_constMap.end()) {
 				m_constTable.push_back(std::make_unique<vm::BoolValue>(boolexp->value));
 				idx = m_constTable.size() - 1;
@@ -216,7 +244,7 @@ public:
 			auto numexp = static_cast<ast::NumberExp*>(exp);
 			uint32_t idx;
 			vm::NumberValue numv(numexp->value);
-			auto it = m_constMap.find(numv);
+			auto it = m_constMap.find(&numv);
 			if (it == m_constMap.end()) {
 				m_constTable.push_back(std::make_unique <vm::NumberValue> (numexp->value));
 				idx = m_constTable.size() - 1;
@@ -231,7 +259,7 @@ public:
 			auto strexp = static_cast<ast::StringExp*>(exp);
 			uint32_t idx;
 			vm::StringValue strv(strexp->value);
-			auto it = m_constMap.find(strv);
+			auto it = m_constMap.find(&strv);
 			if (it == m_constMap.end()) {
 				m_constTable.push_back(std::make_unique <vm::StringValue>(strexp->value));
 				idx = m_constTable.size() - 1;
@@ -252,6 +280,7 @@ public:
 			}
 
 			m_curFunc->instrSect.EmitPushV(varIdx);
+			break;
 		}
 		case ast::ExpType::kBinaOp: {
 			auto binaOpExp = static_cast<ast::BinaOpExp*>(exp);
@@ -307,12 +336,15 @@ public:
 			//}
 
 			for (auto& parexp : funcCallExp->parList) {
-				// 参数入栈，由函数定义将栈中参数放到变量表中
+				// 参数入栈，由call负责将栈中参数放到变量表中
 				GenerateExp(parexp.get());
 			}
+
 			
+
 			// 函数在变量表的索引
 			m_curFunc->instrSect.EmitCall(funcIdx);
+			break;
 		}
 		default:
 			break;
@@ -322,9 +354,13 @@ public:
 
 
 private:
+
+	vm::VM* m_vm;
+
 	vm::FunctionBodyValue* m_curFunc;		// 当前生成函数
 
-	std::map<vm::Value&, uint32_t> m_constMap;
+	// 暂时有问题，指针就没办法找重载了
+	std::map<vm::Value*, uint32_t> m_constMap;
 	std::vector<std::unique_ptr<vm::Value>> m_constTable;		// 全局常量表
 
 	uint32_t m_level;		// 作用域层级

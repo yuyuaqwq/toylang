@@ -6,7 +6,6 @@
 #include <string>
 
 #include "lexer/token.h"
-#include "ast/block.h"
 #include "ast/exp.h"
 
 namespace ast {
@@ -24,6 +23,7 @@ enum class StatType {
 	kReturn,
 	kNewVar,
 	kAssign,
+	kBlock,
 };
 
 
@@ -31,6 +31,17 @@ struct Stat {
 public:
 	virtual StatType GetType() const noexcept = 0;
 };
+
+struct BlockStat : public Stat {
+public:
+	virtual StatType GetType() const noexcept;
+
+	BlockStat(std::vector<std::unique_ptr<Stat>>&& t_statList);
+
+public:
+	std::vector<std::unique_ptr<Stat>> statList;
+};
+
 
 struct ExpStat : public Stat {
 public:
@@ -47,12 +58,12 @@ struct FuncDefStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	FuncDefStat(const std::string& t_funcName, const std::vector<std::string>& t_parList, std::unique_ptr<Block> t_block);
+	FuncDefStat(const std::string& t_funcName, const std::vector<std::string>& t_parList, std::unique_ptr<BlockStat> t_block);
 
 public:
 	std::string funcName;
 	std::vector<std::string> parList;
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 };
 
 struct ElifStat;
@@ -61,11 +72,11 @@ struct IfStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	IfStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<Block> t_block, std::vector<std::unique_ptr<ElifStat>>&& t_elifStatList, std::unique_ptr<ElseStat> t_elseStat);
+	IfStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<BlockStat> t_block, std::vector<std::unique_ptr<ElifStat>>&& t_elifStatList, std::unique_ptr<ElseStat> t_elseStat);
 
 public:
 	std::unique_ptr<Exp> exp;
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 	std::vector<std::unique_ptr<ElifStat>> elifStatList;
 	std::unique_ptr<ElseStat> elseStat;
 };
@@ -75,11 +86,11 @@ struct ElifStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	ElifStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<Block> t_block);
+	ElifStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<BlockStat> t_block);
 
 public:
 	std::unique_ptr<Exp> exp;
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 };
 
 
@@ -87,10 +98,10 @@ struct ElseStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	ElseStat(std::unique_ptr<Block> t_block);
+	ElseStat(std::unique_ptr<BlockStat> t_block);
 
 public:
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 };
 
 
@@ -98,12 +109,12 @@ struct ForStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	ForStat(const std::string& t_varName, std::unique_ptr<Exp> t_exp ,std::unique_ptr<Block> t_block);
+	ForStat(const std::string& t_varName, std::unique_ptr<Exp> t_exp ,std::unique_ptr<BlockStat> t_block);
 
 public:
 	std::string varName;
 	std::unique_ptr<Exp> exp;
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 };
 
 
@@ -111,11 +122,11 @@ struct WhileStat : public Stat {
 public:
 	virtual StatType GetType() const noexcept;
 
-	WhileStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<Block> t_block);
+	WhileStat(std::unique_ptr<Exp> t_exp, std::unique_ptr<BlockStat> t_block);
 
 public:
 	std::unique_ptr<Exp> exp;
-	std::unique_ptr<Block> block;
+	std::unique_ptr<BlockStat> block;
 };
 
 

@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -128,7 +128,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ast\block.cpp" />
     <ClCompile Include="ast\exp.cpp" />
     <ClCompile Include="ast\stat.cpp" />
     <ClCompile Include="codegener\codegener.cpp" />
@@ -141,7 +140,6 @@
     <ClCompile Include="vm\vm.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ast\block.h" />
     <ClInclude Include="ast\exp.h" />
     <ClInclude Include="ast\stat.h" />
     <ClInclude Include="codegener\codegener.h" />

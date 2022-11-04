@@ -63,9 +63,6 @@
     <ClCompile Include="ast\stat.cpp">
       <Filter>源文件\ast</Filter>
     </ClCompile>
-    <ClCompile Include="ast\block.cpp">
-      <Filter>源文件\ast</Filter>
-    </ClCompile>
     <ClCompile Include="vm\instr.cpp">
       <Filter>源文件\vm</Filter>
     </ClCompile>
@@ -93,9 +90,6 @@
       <Filter>头文件\parser</Filter>
     </ClInclude>
     <ClInclude Include="ast\stat.h">
-      <Filter>头文件\ast</Filter>
-    </ClInclude>
-    <ClInclude Include="ast\block.h">
       <Filter>头文件\ast</Filter>
     </ClInclude>
     <ClInclude Include="vm\instr.h">

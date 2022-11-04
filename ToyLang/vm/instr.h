@@ -1,7 +1,9 @@
 #ifndef VM_INSTR_H_
 #define VM_INSTR_H_
 
+#include <map>
 #include <vector>
+#include <string>
 
 namespace vm {
 
@@ -26,105 +28,125 @@ enum class OpcodeType {
 	kJmp,
 };
 
+struct InstrInfo {
+	std::string str;
+	std::vector<char> parSizeList;
+};
+
+extern std::map<OpcodeType, InstrInfo> g_instrSymbol;
 
 class InstrSection {
 public:
-	void Emit(OpcodeType opcode) {
-		m_container.push_back((uint8_t)opcode);
+	OpcodeType GetOpcode(uint32_t pc) {
+		return (OpcodeType)container[pc];
+	}
+
+	uint8_t GetU8(uint32_t pc) {
+		return *(uint8_t*)&container[pc];
+	}
+
+	uint32_t GetU32(uint32_t pc) {
+		return *(uint32_t*)&container[pc];
+	}
+
+	void EmitOpcode(OpcodeType opcode) {
+		container.push_back((uint8_t)opcode);
 	}
 
 	void EmitU8(uint8_t val) {
-		m_container.push_back(val);
+		container.push_back(val);
 	}
 
 	void EmitU32(uint32_t val) {
-		m_container.push_back(val);
-		m_container.push_back(val >> 8);
-		m_container.push_back(val >> 16);
-		m_container.push_back(val >> 24);
+		container.push_back(val);
+		container.push_back(val >> 8);
+		container.push_back(val >> 16);
+		container.push_back(val >> 24);
 	}
 
 	void EmitStop() {
-		Emit(OpcodeType::kStop);
+		EmitOpcode(OpcodeType::kStop);
 	}
 
 	void EmitNop() {
-		Emit(OpcodeType::kNop);
+		EmitOpcode(OpcodeType::kNop);
 	}
 
 	void EmitPushV(uint32_t sv) {
-		Emit(OpcodeType::kPushV);
+		EmitOpcode(OpcodeType::kPushV);
 		EmitU32(sv);
 	}
 
 	void EmitPushK(uint32_t sk) {
-		Emit(OpcodeType::kPushK);
+		EmitOpcode(OpcodeType::kPushK);
 		EmitU32(sk);
 	}
 
 	void EmitPopV(uint32_t dv) {
-		Emit(OpcodeType::kPopV);
+		EmitOpcode(OpcodeType::kPopV);
 		EmitU32(dv);
 	}
 
 	void EmitAdd() {
-		Emit(OpcodeType::kAdd);
+		EmitOpcode(OpcodeType::kAdd);
 	}
 
 	void EmitSub() {
-		Emit(OpcodeType::kSub);
+		EmitOpcode(OpcodeType::kSub);
 	}
 
 	void EmitMul() {
-		Emit(OpcodeType::kMul);
+		EmitOpcode(OpcodeType::kMul);
 	}
 
 	void EmitDiv() {
-		Emit(OpcodeType::kDiv);
+		EmitOpcode(OpcodeType::kDiv);
 	}
 
 	void EmitCall(uint32_t sv) {
-		Emit(OpcodeType::kCall);
+		EmitOpcode(OpcodeType::kCall);
 		EmitU32(sv);
 	}
 
 	void EmitRet() {
-		Emit(OpcodeType::kRet);
+		EmitOpcode(OpcodeType::kRet);
 	}
 
 	void EmitEq() {
-		Emit(OpcodeType::kEq);
+		EmitOpcode(OpcodeType::kEq);
 	}
 
 	void EmitGt() {
-		Emit(OpcodeType::kGt);
+		EmitOpcode(OpcodeType::kGt);
 	}
 
 	void EmitGe() {
-		Emit(OpcodeType::kGe);
+		EmitOpcode(OpcodeType::kGe);
 	}
 
 	void EmitLt() {
-		Emit(OpcodeType::kLt);
+		EmitOpcode(OpcodeType::kLt);
 	}
 
 	void EmitLe() {
-		Emit(OpcodeType::kLe);
+		EmitOpcode(OpcodeType::kLe);
 	}
 
 	void EmitJc(uint32_t i) {
-		Emit(OpcodeType::kJc);
+		EmitOpcode(OpcodeType::kJc);
 		EmitU32(i);
 	}
 
 	void EmitJmp(uint32_t i) {
-		Emit(OpcodeType::kJmp);
+		EmitOpcode(OpcodeType::kJmp);
 		EmitU32(i);
 	}
 
-private:
-	std::vector<uint8_t> m_container;
+public:
+	std::vector<uint8_t> container;
 };
+
+
 
 
 } // namespace vm 

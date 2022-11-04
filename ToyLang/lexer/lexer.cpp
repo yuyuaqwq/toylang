@@ -66,7 +66,7 @@ Token Lexer::NextToken() {
     char c;
 
     // Ìø¹ý¿Õ¸ñ
-    while ((c = NextChar()) && c == ' ');
+    while ((c = NextChar()) && (c == ' ' || c == '\n'));
 
     token.line = m_line;
 
@@ -97,16 +97,16 @@ Token Lexer::NextToken() {
     case ')':
         token.type = TokenType::kSepRParen;
         return token;
-    case ']':
+    case '[':
         token.type = TokenType::kSepLBrack;
         return token;
-    case '[':
+    case ']':
         token.type = TokenType::kSepRBrack;
         return token;
-    case '}':
+    case '{':
         token.type = TokenType::kSepLCurly;
         return token;
-    case '{':
+    case '}':
         token.type = TokenType::kSepRCurly;
         return token;
 

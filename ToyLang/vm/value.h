@@ -2,6 +2,7 @@
 #define VM_VALUE_H_
 
 #include <string>
+#include <memory>
 
 #include "vm/instr.h"
 
@@ -12,15 +13,25 @@ enum class ValueType {
 	kBool,
 	kNumber,
 	kString,
-	kFunctionBody,
 	kFunctionProto,
+	kFunctionBody,
+	kFunctionBridge,
 };
 
+
+class NullValue;
+class BoolValue;
+class NumberValue;
+class StringValue;
 class FunctionProtoValue;
 class FunctionBodyValue;
+class FunctionBridgeValue;
+
 class Value {
 public:
 	virtual ValueType GetType() const noexcept = 0;
+
+	virtual std::unique_ptr<Value> Copy() const = 0;
 
 	bool operator<(const Value& value) const;
 
@@ -28,25 +39,29 @@ public:
 
 	FunctionBodyValue* GetFunctionBody();
 
+	FunctionBridgeValue* GetFunctionBirdge();
+
+	NumberValue* GetNumber();
+
+	StringValue* GetString();
+
 };
 
 class NullValue :public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kNull;
-	}
+	virtual ValueType GetType() const noexcept;
+
+	virtual std::unique_ptr<Value> Copy() const;
 };
 
 
 class BoolValue :public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kBool;
-	}
+	virtual ValueType GetType() const noexcept;
 
-	explicit BoolValue(bool t_value) : value(t_value) {
+	virtual std::unique_ptr<Value> Copy() const;
 
-	}
+	explicit BoolValue(bool t_value);
 
 public:
 	bool value;
@@ -54,27 +69,24 @@ public:
 
 class NumberValue :public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kNumber;
-	}
+	virtual ValueType GetType() const noexcept;
 
-	explicit NumberValue(int t_value) : value(t_value) {
+	virtual std::unique_ptr<Value> Copy() const;
 
-	}
+	explicit NumberValue(uint64_t t_value);
 
 public:
-	int value;
+	uint64_t value;
 };
+
 
 class StringValue :public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kString;
-	}
+	virtual ValueType GetType() const noexcept;
 
-	explicit StringValue(const std::string& t_value) : value(t_value) {
+	virtual std::unique_ptr<Value> Copy() const;
 
-	}
+	explicit StringValue(const std::string& t_value);
 
 public:
 	std::string value;
@@ -87,27 +99,50 @@ public:
 // 并且会在局部变量表中创建并函数原型，指向函数体，类似语法糖的想法
 class FunctionBodyValue : public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kFunctionBody;
-	}
+	virtual ValueType GetType() const noexcept;
 
-	FunctionBodyValue(uint32_t t_parCount) : parCount(t_parCount) {
+	virtual std::unique_ptr<Value> Copy() const;
 
-	}
+	FunctionBodyValue(uint32_t t_parCount);
+
+	std::string Disassembly();
 
 public:
 	uint32_t parCount;
 	InstrSection instrSect;
 };
 
+typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, std::vector<std::unique_ptr<Value>>* stack);
+
+class FunctionBridgeValue : public Value {
+public:
+	virtual ValueType GetType() const noexcept;
+
+	std::unique_ptr<Value> Copy() const;
+
+	FunctionBridgeValue(FunctionBridgeCall t_funcAddr);
+
+public:
+	FunctionBridgeCall funcAddr;
+};
 
 class FunctionProtoValue : public Value {
 public:
-	virtual ValueType GetType() const noexcept {
-		return ValueType::kFunctionProto;
-	}
+	virtual ValueType GetType() const noexcept;
+
+	virtual std::unique_ptr<Value> Copy() const;
+
+	FunctionProtoValue(FunctionBodyValue* t_value);
+	FunctionProtoValue(FunctionBridgeValue* t_value);
+
 public:
-	FunctionBodyValue* value;
+	union
+	{
+		Value* value;
+		FunctionBodyValue* bodyValue;
+		FunctionBridgeValue* bridgeValue;
+	};
+	
 };
 
 
