@@ -39,12 +39,13 @@ public:
 		m_scope.push_back(Scope{ m_curFunc });
 	}
 
-
 	void EntryScope(vm::FunctionBodyValue* subFunc = nullptr) {
 		if (!subFunc) {
+			// 进入的作用域不是新函数
 			m_scope.push_back(Scope{ m_curFunc, m_scope[m_scope.size() - 1].varCount });
 			return;
 		}
+		// 进入的作用域是新函数
 		m_scope.push_back(Scope{ subFunc, 0 });
 	}
 
@@ -75,7 +76,6 @@ public:
 		return varIdx;
 	}
 
-	
 	uint32_t GetVar(std::string varName) {
 		uint32_t varIdx = -1;
 		// 就近找变量
@@ -160,6 +160,9 @@ public:
 			GenerateNewVarStat(static_cast<ast::NewVarStat*>(stat));
 			break;
 		}
+		case ast::StatType::kIf:
+			GenerateIfStat(static_cast<ast::IfStat*>(stat));
+			break;
 		default:
 			break;
 		}
@@ -175,9 +178,10 @@ public:
 		m_curFunc->instrSect.EmitPopV(varIdx);
 		
 		
-		// 保存环境，用以生成新指令流
+		// 保存环境，以生成新指令流
 		auto savefunc = m_curFunc;
 
+		// 切换环境
 		EntryScope(m_constTable[constIdx]->GetFunctionBody());
 		m_curFunc = m_constTable[constIdx]->GetFunctionBody();
 
@@ -225,8 +229,63 @@ public:
 		}
 		GenerateExp(stat->exp.get());		// 表达式压栈
 		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到变量中
-		
 	}
+
+	void GenerateIfStat(ast::IfStat* stat) {
+		GenerateExp(stat->exp.get());		// 表达式结果压栈
+
+		
+		uint32_t pc = m_curFunc->instrSect.GetPc() + 1;
+		m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳转的指令
+
+		GenerateBlock(stat->block.get());
+
+		// 条件为false，跳转到if块之后
+		*(uint32_t*)m_curFunc->instrSect.GetPtr(pc) = m_curFunc->instrSect.GetPc();
+		
+		// if
+		// jcf end
+		// ...
+	// end:
+		// ...
+
+
+		// if
+		// else
+
+		// jcf else
+		// ...
+		// jmp end
+	// else:
+		// ...
+	// end:
+		// ....
+
+
+
+		// if 
+		// elif
+		// else
+
+		// jcf elif
+		// ...
+		// jmp end
+	// elif:
+		// jcf else
+		// ...
+		// jmp end
+	// else:
+		// ...
+	// end:
+		// ....
+
+
+		for (auto& elifStat : stat->elifStatList) {
+
+		}
+
+	}
+
 
 	void GenerateExp(ast::Exp* exp) {
 		switch (exp->GetType())

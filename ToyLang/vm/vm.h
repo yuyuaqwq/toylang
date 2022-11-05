@@ -181,15 +181,73 @@ public:
 				break;
 			}
 			case OpcodeType::kRet: {
-				auto& pc = m_stackSect[m_stackSect.size() - 1];
-				auto& curFunc = m_stackSect[m_stackSect.size() - 2];
+				auto& retValue = m_stackSect[m_stackSect.size() - 1];
+				auto& pc = m_stackSect[m_stackSect.size() - 2];
+				auto& curFunc = m_stackSect[m_stackSect.size() - 3];
 
 				// »Ö¸´»·¾³
 				m_curFunc = (FunctionBodyValue*)curFunc->GetNumber()->value;
 				m_pc = pc->GetNumber()->value;
 
+				curFunc = std::move(retValue);
 				m_stackSect.pop_back();
 				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kEq: {
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto& b = m_stackSect[m_stackSect.size() - 2];
+				bool res = *a == *b;
+				b = std::move(std::make_unique<BoolValue>(res));
+				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kLt: {
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto& b = m_stackSect[m_stackSect.size() - 2];
+				bool res = *a < *b;
+				b = std::move(std::make_unique<BoolValue>(res));
+				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kLe: {
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto& b = m_stackSect[m_stackSect.size() - 2];
+				bool res = *a <= *b;
+				b = std::move(std::make_unique<BoolValue>(res));
+				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kGt: {
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto& b = m_stackSect[m_stackSect.size() - 2];
+				bool res = !(*a <= *b);
+				b = std::move(std::make_unique<BoolValue>(res));
+				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kGe: {
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto& b = m_stackSect[m_stackSect.size() - 2];
+				bool res = !(*a < *b);
+				b = std::move(std::make_unique<BoolValue>(res));
+				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kJcf: {
+				auto newPc = m_curFunc->instrSect.GetU32(m_pc);
+				m_pc += 4;
+				auto& a = m_stackSect[m_stackSect.size() - 1];
+				auto boolValue = a->GetBool()->value;
+				m_stackSect.pop_back();
+				if (boolValue == false) {
+					m_pc = newPc;
+				}
+				break;
+			}
+			case OpcodeType::kJmp: {
+				auto newPc = m_curFunc->instrSect.GetU32(m_pc);
+				m_pc = newPc;
 				break;
 			}
 			default:

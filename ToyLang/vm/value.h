@@ -37,15 +37,23 @@ public:
 
 	bool operator<(const Value& value) const;
 
+	bool operator<=(const Value& value) const;
+
+	bool operator==(const Value& value) const;
+
+
+
+	BoolValue* GetBool();
+
+	NumberValue* GetNumber();
+
+	StringValue* GetString();
+
 	FunctionProtoValue* GetFunctionProto();
 
 	FunctionBodyValue* GetFunctionBody();
 
 	FunctionBridgeValue* GetFunctionBirdge();
-
-	NumberValue* GetNumber();
-
-	StringValue* GetString();
 
 	UpValue* GetUp();
 

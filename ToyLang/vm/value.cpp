@@ -11,7 +11,7 @@ bool Value::operator<(const Value& value) const {
 		case ValueType::kBool: {
 			auto a = static_cast<const BoolValue*>(this);
 			auto b = static_cast<const BoolValue*>(&value);
-			return a->value == false && b->value == true;
+			return a->value < b->value;
 		}
 		case ValueType::kNumber: {
 			auto a = static_cast<const NumberValue*>(this);
@@ -26,10 +26,11 @@ bool Value::operator<(const Value& value) const {
 		case ValueType::kFunctionProto: {
 			auto a = static_cast<const FunctionProtoValue*>(this);
 			auto b = static_cast<const FunctionProtoValue*>(&value);
-			return a->bodyValue < b->bodyValue;
+			return a->value < b->value;
 		}
 		case ValueType::kFunctionBridge:
-		case ValueType::kFunctionBody: {
+		case ValueType::kFunctionBody:
+		case ValueType::kUp: {
 			return false;
 		}
 		}
@@ -37,6 +38,92 @@ bool Value::operator<(const Value& value) const {
 	return GetType() < value.GetType();
 }
 
+bool Value::operator<=(const Value& value) const {
+	if (GetType() == value.GetType()) {
+		switch (GetType()) {
+		case ValueType::kNull: {
+			return true;
+		}
+		case ValueType::kBool: {
+			auto a = static_cast<const BoolValue*>(this);
+			auto b = static_cast<const BoolValue*>(&value);
+			return a->value <= b->value;
+		}
+		case ValueType::kNumber: {
+			auto a = static_cast<const NumberValue*>(this);
+			auto b = static_cast<const NumberValue*>(&value);
+			return a->value <= b->value;
+		}
+		case ValueType::kString: {
+			auto a = static_cast<const StringValue*>(this);
+			auto b = static_cast<const StringValue*>(&value);
+			return a->value <= b->value;
+		}
+		case ValueType::kFunctionProto: {
+			auto a = static_cast<const FunctionProtoValue*>(this);
+			auto b = static_cast<const FunctionProtoValue*>(&value);
+			return a->value <= b->value;
+		}
+									  
+		case ValueType::kFunctionBridge:
+		case ValueType::kFunctionBody: 
+		case ValueType::kUp: {
+			return false;
+		}
+		}
+	}
+	return GetType() < value.GetType();
+}
+
+bool Value::operator==(const Value& value) const {
+	if (GetType() == value.GetType()) {
+		switch (GetType()) {
+		case ValueType::kNull: {
+			return true;
+		}
+		case ValueType::kBool: {
+			auto a = static_cast<const BoolValue*>(this);
+			auto b = static_cast<const BoolValue*>(&value);
+			return a->value && b->value;
+		}
+		case ValueType::kNumber: {
+			auto a = static_cast<const NumberValue*>(this);
+			auto b = static_cast<const NumberValue*>(&value);
+			return a->value == b->value;
+		}
+		case ValueType::kString: {
+			auto a = static_cast<const StringValue*>(this);
+			auto b = static_cast<const StringValue*>(&value);
+			return a->value == b->value;
+		}
+		case ValueType::kFunctionProto: {
+			auto a = static_cast<const FunctionProtoValue*>(this);
+			auto b = static_cast<const FunctionProtoValue*>(&value);
+			return a->value == b->value;
+		}
+		case ValueType::kFunctionBridge:
+		case ValueType::kFunctionBody:
+		case ValueType::kUp: {
+			return false;
+		}
+		}
+	}
+	return GetType() == value.GetType();
+}
+
+
+
+BoolValue* Value::GetBool() {
+	return static_cast<BoolValue*>(this);
+}
+
+NumberValue* Value::GetNumber() {
+	return static_cast<NumberValue*>(this);
+}
+
+StringValue* Value::GetString() {
+	return static_cast<StringValue*>(this);
+}
 
 FunctionProtoValue* Value::GetFunctionProto() {
 	return static_cast<FunctionProtoValue*>(this);
@@ -50,13 +137,7 @@ FunctionBridgeValue* Value::GetFunctionBirdge() {
 	return static_cast<FunctionBridgeValue*>(this);
 }
 
-NumberValue* Value::GetNumber() {
-	return static_cast<NumberValue*>(this);
-}
 
-StringValue* Value::GetString() {
-	return static_cast<StringValue*>(this);
-}
 
 UpValue* Value::GetUp() {
 	return static_cast<UpValue*>(this);

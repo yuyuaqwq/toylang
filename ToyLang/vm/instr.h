@@ -25,7 +25,7 @@ enum class OpcodeType {
 	kGe,
 	kLt,
 	kLe,
-	kJc,
+	kJcf,
 	kJmp,
 };
 
@@ -38,6 +38,14 @@ extern std::map<OpcodeType, InstrInfo> g_instrSymbol;
 
 class InstrSection {
 public:
+	uint8_t* GetPtr(uint32_t pc) {
+		return container.data() + pc;
+	}
+
+	uint32_t GetPc() {
+		return container.size();
+	}
+
 	OpcodeType GetOpcode(uint32_t pc) {
 		return (OpcodeType)container[pc];
 	}
@@ -138,8 +146,8 @@ public:
 		EmitOpcode(OpcodeType::kLe);
 	}
 
-	void EmitJc(uint32_t i) {
-		EmitOpcode(OpcodeType::kJc);
+	void EmitJcf(uint32_t i) {
+		EmitOpcode(OpcodeType::kJcf);
 		EmitU32(i);
 	}
 
