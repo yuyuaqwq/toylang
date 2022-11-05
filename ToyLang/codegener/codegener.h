@@ -15,6 +15,14 @@
 
 namespace codegener {
 
+struct Scope {
+	vm::FunctionBodyValue* m_func;		// 作用域所属函数
+	uint32_t varCount;		// 当前函数在当前作用域中的有效变量计数
+	std::map<std::string, uint32_t> m_varTable;		// 变量表，key为变量索引
+};
+
+
+
 // 代码生成时发生的异常
 class CodeGenerException : public std::exception{
 public:
@@ -26,61 +34,77 @@ public:
 
 class CodeGener {
 public:
-	CodeGener(vm::VM* t_vm) : m_vm(t_vm), m_level(0), m_varCount(0), m_varTable(1) {
+	CodeGener(vm::VM* t_vm) : m_vm{ t_vm } {
 		m_curFunc = &m_vm->m_mainFunc;
+		m_scope.push_back(Scope{ m_curFunc });
 	}
 
 
-	void EntryScope() {
-		m_level++;
-		m_varTable.push_back(std::map<std::string, uint32_t>());
+	void EntryScope(vm::FunctionBodyValue* subFunc = nullptr) {
+		if (!subFunc) {
+			m_scope.push_back(Scope{ m_curFunc, m_scope[m_scope.size() - 1].varCount });
+			return;
+		}
+		m_scope.push_back(Scope{ subFunc, 0 });
 	}
 
 	void ExitScope() {
-		
-		FreeMultVars(m_varTable[m_level].size());		// 回收作用域中使用的变量
-		m_level--;
-		m_varTable.pop_back();
+		m_scope.pop_back();
 	}
 
-	uint32_t AllocVar() {
-		return m_varCount++;
+	uint32_t AllocConst(std::unique_ptr<vm::Value> value) {
+		uint32_t constIdx;
+		auto it = m_constMap.find(value.get());
+		if (it == m_constMap.end()) {
+			m_constTable.push_back(std::move(value));
+			constIdx = m_constTable.size() - 1;
+		}
+		else {
+			constIdx = it->second;
+		}
+		return constIdx;
 	}
 
-	void FreeVar() {
-		m_varCount--;
+	uint32_t AllocVar(std::string varName) {
+		auto& varTable = m_scope[m_scope.size() - 1].m_varTable;
+		if (varTable.find(varName) != varTable.end()) {
+			throw CodeGenerException("local var redefinition");
+		}
+		auto varIdx = m_scope[m_scope.size() - 1].varCount++;
+		varTable.insert(std::make_pair(varName, varIdx));
+		return varIdx;
 	}
 
-	void FreeMultVars(uint32_t count) {
-		m_varCount -= count;
-	}
-
-	uint32_t GetVar(std::string name) {
+	
+	uint32_t GetVar(std::string varName) {
 		uint32_t varIdx = -1;
 		// 就近找变量
-		auto i = m_level;
-		do {
-			auto& varScope = m_varTable[i];
-			auto it = varScope.find(name);
-			if (it != varScope.end()) {
-				varIdx = it->second;
+		
+		for (int i = m_scope.size() - 1; i >= 0; i--) {
+			auto& varTable = m_scope[i].m_varTable;
+			auto it = varTable.find(varName);
+			if (it != varTable.end()) {
+				if (m_scope[i].m_func == m_curFunc) {
+					varIdx = it->second;
+				}
+				else {
+					// 引用外部函数的变量，需要捕获，为当前函数加载upvalue变量
+					auto constIdx = AllocConst(std::make_unique<vm::UpValue>(it->second, m_scope[i].m_func));
+					m_curFunc->instrSect.EmitPushK(constIdx);
+					varIdx = AllocVar(varName);
+					m_curFunc->instrSect.EmitPopV(varIdx);
+				}
+				break;
 			}
-		} while (i--);
-
+		}
 		return varIdx;
 	}
 
 
 	void RegistryFunctionBridge(std::string funcName, vm::FunctionBridgeCall funcAddr) {
-		auto& varScope = m_varTable[m_level];
-		if (varScope.find(funcName) != varScope.end()) {
-			throw CodeGenerException("function redefinition");
-		}
-		m_constTable.push_back(std::make_unique<vm::FunctionBridgeValue>(funcAddr));
-		int constIdx = m_constTable.size() - 1;
+		auto varIdx = AllocVar(funcName);
+		auto constIdx = AllocConst(std::make_unique<vm::FunctionBridgeValue>(funcAddr));
 
-		auto varIdx = AllocVar();
-		varScope.insert(std::make_pair(funcName, varIdx));
 
 		// 生成将函数放到变量表中的代码
 		// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
@@ -135,15 +159,8 @@ public:
 	}
 
 	void GenerateFuncDefStat(ast::FuncDefStat* stat) {
-		auto& varScope = m_varTable[m_level];
-		if (varScope.find(stat->funcName) != varScope.end()) {
-			throw CodeGenerException("function redefinition");
-		}
-		m_constTable.push_back(std::make_unique<vm::FunctionBodyValue>(stat->parList.size()));
-		int constIdx = m_constTable.size() - 1;
-		
-		auto varIdx = AllocVar();
-		varScope.insert(std::make_pair(stat->funcName, varIdx));
+		auto varIdx = AllocVar(stat->funcName);
+		auto constIdx = AllocConst(std::make_unique<vm::FunctionBodyValue>(stat->parList.size()));
 
 		// 生成将函数放到变量表中的代码
 		// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
@@ -151,19 +168,15 @@ public:
 		m_curFunc->instrSect.EmitPopV(varIdx);
 		
 		
-		// 备份当前环境，以新环境去生成函数指令(函数是独立的作用域，不能捕获函数外作用域的符号)
-		auto saveLevel = m_level;
-		auto saveVarCount = m_varCount;
-		auto saveVarTable = std::move(m_varTable);
+		// 保存环境，用以生成新指令流
 		auto savefunc = m_curFunc;
 
-		m_level = 0;
-		m_varCount = 0;
-		m_varTable.resize(1);
+		EntryScope(m_constTable[constIdx]->GetFunctionBody());
 		m_curFunc = m_constTable[constIdx]->GetFunctionBody();
 
+		
 		for (int i = 0; i < m_curFunc->parCount; i++) {
-			m_varTable[m_level].insert(std::make_pair(stat->parList[i], AllocVar()));
+			AllocVar(stat->parList[i]);
 		}
 
 		auto block = stat->block.get();
@@ -172,29 +185,28 @@ public:
 		}
 		m_curFunc->instrSect.EmitRet();
 
+
 		// 恢复环境
+		ExitScope();
 		m_curFunc = savefunc;
-		m_varTable = std::move(saveVarTable);
-		m_varCount = saveVarCount;
-		m_level = saveLevel;
 	}
 
 
-	// 局部变量在此无法得知总共需要多少，因此不能分配到栈上
+	// 局部变量在此无法提前得知总共需要多少，因此不能分配到栈上
+	// 解决方案：
+		// 另外提供变量表容器
 
-	// vm中需要有一个字段，存放当前函数的基变量索引，访问变量的指令都要加上这个
-	// 每次call时，将当前该字段的值push到栈中，并且将该字段置为当前局部变量表的最顶部
-	// ret时就从栈中恢复这个字段
+	// 函数内指令流的变量索引在生成时，无法确定变量分配的索引
+	// 原因：
+		// 定义时无法提前得知call的位置，且call可能有多处，每次call时，变量表的状态可能都不一样
+	// 解决方案：
+		// 为每个函数提供一个自己的变量表，不放到虚拟机中，call时切换变量表
+	    // 在代码生成过程中，需要获取变量时，如果发现使用的变量是当前函数之外的外部作用域的，就会在常量区中创建一个类型为upvalue的变量，并加载到当前函数的变量中
+		// upvalue存储了外部函数的Body地址，以及对应的变量索引
 
-	// 函数定义指令就暂时将m_varCount置0，这样子函数定义中的块被解析时，变量索引又是从0开始的，返回后恢复
 
 	void GenerateNewVarStat(ast::NewVarStat* stat) {
-		auto& varScope = m_varTable[m_level];
-		if (varScope.find(stat->varName) != varScope.end()) {
-			throw CodeGenerException("local var redefinition");
-		}
-		auto varIdx = AllocVar();
-		varScope.insert(std::make_pair(stat->varName, varIdx));
+		auto varIdx = AllocVar(stat->varName);
 		GenerateExp(stat->exp.get());		// 生成表达式计算指令，最终结果会到栈顶
 		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到局部变量中
 	}
@@ -205,69 +217,34 @@ public:
 			throw CodeGenerException("var not defined");
 		}
 		GenerateExp(stat->exp.get());		// 表达式压栈
-		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到局部变量中
+		m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到变量中
+		
 	}
 
 	void GenerateExp(ast::Exp* exp) {
 		switch (exp->GetType())
 		{
 		case ast::ExpType::kNull: {
-			vm::NullValue null;
-			uint32_t idx;
-			auto it = m_constMap.find(&null);
-			if (it == m_constMap.end()) {
-				m_constTable.push_back(std::make_unique<vm::NullValue>());
-				idx = m_constTable.size() - 1;
-			}
-			else {
-				idx = it->second;
-			}
-			m_curFunc->instrSect.EmitPushK(idx);
+			auto constIdx = AllocConst(std::make_unique<vm::NullValue>());
+			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kBool: {
 			auto boolexp = static_cast<ast::BoolExp*>(exp);
-			uint32_t idx;
-			vm::BoolValue boolv(boolexp->value);
-			auto it = m_constMap.find(&boolv);
-			if (it == m_constMap.end()) {
-				m_constTable.push_back(std::make_unique<vm::BoolValue>(boolexp->value));
-				idx = m_constTable.size() - 1;
-			}
-			else {
-				idx = it->second;
-			}
-			m_curFunc->instrSect.EmitPushK(idx);
+			auto constIdx = AllocConst(std::make_unique<vm::BoolValue>(boolexp->value));
+			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kNumber: {
 			auto numexp = static_cast<ast::NumberExp*>(exp);
-			uint32_t idx;
-			vm::NumberValue numv(numexp->value);
-			auto it = m_constMap.find(&numv);
-			if (it == m_constMap.end()) {
-				m_constTable.push_back(std::make_unique <vm::NumberValue> (numexp->value));
-				idx = m_constTable.size() - 1;
-			}
-			else {
-				idx = it->second;
-			}
-			m_curFunc->instrSect.EmitPushK(idx);
+			auto constIdx = AllocConst(std::make_unique<vm::NumberValue>(numexp->value));
+			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kString: {
 			auto strexp = static_cast<ast::StringExp*>(exp);
-			uint32_t idx;
-			vm::StringValue strv(strexp->value);
-			auto it = m_constMap.find(&strv);
-			if (it == m_constMap.end()) {
-				m_constTable.push_back(std::make_unique <vm::StringValue>(strexp->value));
-				idx = m_constTable.size() - 1;
-			}
-			else {
-				idx = it->second;
-			}
-			m_curFunc->instrSect.EmitPushK(idx);
+			auto constIdx = AllocConst(std::make_unique<vm::StringValue>(strexp->value));
+			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kName: {
@@ -279,7 +256,9 @@ public:
 				throw CodeGenerException("var not defined");
 			}
 
-			m_curFunc->instrSect.EmitPushV(varIdx);
+			m_curFunc->instrSect.EmitPushV(varIdx);	// 从变量中获取
+
+			
 			break;
 		}
 		case ast::ExpType::kBinaOp: {
@@ -326,8 +305,8 @@ public:
 		case ast::ExpType::kFuncCall: {
 			auto funcCallExp = static_cast<ast::FuncCallExp*>(exp);
 
-			auto funcIdx = GetVar(funcCallExp->name);
-			if (funcIdx == -1) {
+			auto varIdx = GetVar(funcCallExp->name);
+			if (varIdx == -1) {
 				throw CodeGenerException("Function not defined");
 			}
 
@@ -340,10 +319,8 @@ public:
 				GenerateExp(parexp.get());
 			}
 
-			
-
-			// 函数在变量表的索引
-			m_curFunc->instrSect.EmitCall(funcIdx);
+			// 函数原型存放在变量表中
+			m_curFunc->instrSect.EmitCall(varIdx);
 			break;
 		}
 		default:
@@ -359,13 +336,11 @@ private:
 
 	vm::FunctionBodyValue* m_curFunc;		// 当前生成函数
 
-	// 暂时有问题，指针就没办法找重载了
+	// 暂时有问题，指针就没办法找重载<了
 	std::map<vm::Value*, uint32_t> m_constMap;
 	std::vector<std::unique_ptr<vm::Value>> m_constTable;		// 全局常量表
 
-	uint32_t m_level;		// 作用域层级
-	uint32_t m_varCount;			// 总分配局部变量计数
-	std::vector<std::map<std::string, uint32_t>> m_varTable;		// 变量表，与作用域有关，key为局部变量索引
+	std::vector<Scope> m_scope;
 };
 
 } // namespace codegener

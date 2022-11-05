@@ -72,14 +72,14 @@ public:
 		EmitOpcode(OpcodeType::kNop);
 	}
 
-	void EmitPushV(uint32_t sv) {
-		EmitOpcode(OpcodeType::kPushV);
-		EmitU32(sv);
-	}
-
 	void EmitPushK(uint32_t sk) {
 		EmitOpcode(OpcodeType::kPushK);
 		EmitU32(sk);
+	}
+
+	void EmitPushV(uint32_t sv) {
+		EmitOpcode(OpcodeType::kPushV);
+		EmitU32(sv);
 	}
 
 	void EmitPopV(uint32_t dv) {

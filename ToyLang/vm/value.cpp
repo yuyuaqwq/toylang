@@ -58,6 +58,10 @@ StringValue* Value::GetString() {
 	return static_cast<StringValue*>(this);
 }
 
+UpValue* Value::GetUp() {
+	return static_cast<UpValue*>(this);
+}
+
 
 
 
@@ -145,7 +149,8 @@ std::string FunctionBodyValue::Disassembly() {
 		str += info->second.str + " ";
 		for (const auto& parSize : info->second.parSizeList) {
 			if (parSize == 4) {
-				str += std::to_string(instrSect.GetU32(pc)) + " ";
+				auto ki = instrSect.GetU32(pc);
+				str += std::to_string(ki) + " ";
 			}
 			pc += parSize;
 
@@ -170,6 +175,21 @@ FunctionProtoValue::FunctionProtoValue(FunctionBodyValue* t_value) : bodyValue(t
 
 
 FunctionProtoValue::FunctionProtoValue(FunctionBridgeValue* t_value) : bridgeValue(t_value) {
+
+}
+
+
+
+
+ValueType UpValue::GetType() const noexcept {
+	return ValueType::kUp;
+}
+
+std::unique_ptr<Value> UpValue::UpValue::Copy() const {
+	return std::make_unique<UpValue>(index, funcProto);
+}
+
+UpValue::UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto): index(t_index), funcProto(t_funcProto) {
 
 }
 

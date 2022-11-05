@@ -30,7 +30,7 @@ public:
 	friend class codegener::CodeGener;
 
 public:
-	VM() : m_mainFunc{ 0 }, m_varIdxBase { 0 }, m_pc{ 0 }, m_curFunc{ 0 }{
+	VM() : m_mainFunc{ 0 }, m_pc{ 0 }, m_curFunc{ 0 }{
 		m_curFunc = &m_mainFunc;
 	}
 
@@ -39,29 +39,39 @@ public:
 	}
 
 	Value* GetVar(uint32_t idx) {
-		idx += m_varIdxBase;
-		return m_varSect[idx].get();
+		if (m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
+			// 闭包可能形成链表(内部向外层作用域找，根据名字找到了变量，但是该变量实际上也是闭包)，因此要重复向上直到不是闭包
+			// 有时间可以从代码生成那边优化，找到了就循环向上找
+			auto func = m_curFunc;
+			auto upvalue = func->varSect[idx]->GetUp();
+			while (upvalue->funcProto->varSect[upvalue->index]->GetType() == ValueType::kUp) {
+				func = upvalue->funcProto;
+				upvalue = func->varSect[upvalue->index]->GetUp();
+			}
+			return upvalue->funcProto->varSect[upvalue->index].get();
+		}
+		return m_curFunc->varSect[idx].get();
 	}
 
 	std::unique_ptr<Value> GetVarCopy(uint32_t idx) {
-		idx += m_varIdxBase;
-		return m_varSect[idx]->Copy();
+		return GetVar(idx)->Copy();
 	}
 
 	void SetVar(uint32_t idx, std::unique_ptr<Value> var) {
-		idx += m_varIdxBase;
-		if (idx >= m_varSect.size()) {
-			m_varSect.resize(idx + 1);
+		if (idx >= m_curFunc->varSect.size()) {
+			m_curFunc->varSect.resize(idx + 1);
 		}
-		m_varSect[idx] = std::move(var);
+		else if (m_curFunc->varSect[idx].get() && m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
+			// 如果被写入的是捕获变量
+			auto upvalue = m_curFunc->varSect[idx]->GetUp();
+			upvalue->funcProto->varSect.at(upvalue->index) = std::move(var);
+			return;
+		}
+		m_curFunc->varSect[idx] = std::move(var);
 	}
 
 	void SetVar(uint32_t idx, Value* var) {
-		idx += m_varIdxBase;
-		if (idx >= m_varSect.size()) {
-			m_varSect.resize(idx + 1);
-		}
-		m_varSect[idx] = var->Copy();
+		SetVar(idx, var->Copy());
 	}
 
 
@@ -129,40 +139,47 @@ public:
 				auto value = GetVar(varIdx)->GetFunctionProto()->value;
 
 				if (value->GetType() == ValueType::kFunctionBody) {
+					
 					auto callFunc = value->GetFunctionBody();
-					printf("%s", callFunc->Disassembly().c_str());
-					auto saveVarIdxBase = m_varIdxBase;
-					m_varIdxBase = m_varSect.size();
-					for (int i = callFunc->parCount - 1; i >= 0; i--) {
+
+					printf("%s\n", callFunc->Disassembly().c_str());
+
+					auto saveFunc = m_curFunc;
+					auto savePc = m_pc;
+
+					// 切换环境
+					m_curFunc = callFunc;
+					m_pc = 0;
+
+					// 移动栈上的参数到新函数的局部变量表
+					//m_varIdxBase = m_varSect.size();
+					for (int i = m_curFunc->parCount - 1; i >= 0; i--) {
 						SetVar(i, std::move(m_stackSect[m_stackSect.size() - 1]));
 						m_stackSect.pop_back();
 					}
 
 					// 保存当前环境
-					m_stackSect.push_back(std::make_unique<NumberValue>(saveVarIdxBase));
-					m_stackSect.push_back(std::make_unique<NumberValue>((uint64_t)m_curFunc));
-					m_stackSect.push_back(std::make_unique<NumberValue>(m_pc));
-
-					m_curFunc = callFunc;
-					m_pc = 0;
+					m_stackSect.push_back(std::make_unique<NumberValue>((uint64_t)saveFunc));
+					m_stackSect.push_back(std::make_unique<NumberValue>(savePc));
 					
 				}
 				else if (value->GetType() == ValueType::kFunctionBridge) {
 					auto callFunc = value->GetFunctionBirdge();
 					callFunc->funcAddr(1, &m_stackSect);
 				}
+				else {
+					throw VMException("Wrong call type");
+				}
 				break;
 			}
 			case OpcodeType::kRet: {
 				auto& pc = m_stackSect[m_stackSect.size() - 1];
 				auto& curFunc = m_stackSect[m_stackSect.size() - 2];
-				auto& varIdxBase = m_stackSect[m_stackSect.size() - 3];
 
-				m_pc = pc->GetNumber()->value;
+				// 恢复环境
 				m_curFunc = (FunctionBodyValue*)curFunc->GetNumber()->value;
-				m_varIdxBase = varIdxBase->GetNumber()->value;
+				m_pc = pc->GetNumber()->value;
 
-				m_stackSect.pop_back();
 				m_stackSect.pop_back();
 				m_stackSect.pop_back();
 				break;
@@ -175,12 +192,10 @@ public:
 
 private:
 	uint32_t m_pc;
-	uint32_t m_varIdxBase;
 	FunctionBodyValue m_mainFunc;
 	FunctionBodyValue* m_curFunc;
 	std::vector<std::unique_ptr<Value>> m_stackSect;
 	std::vector<std::unique_ptr<Value>> m_constSect;
-	std::vector<std::unique_ptr<Value>> m_varSect;
 	
 };
 

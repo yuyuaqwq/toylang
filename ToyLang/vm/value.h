@@ -16,6 +16,7 @@ enum class ValueType {
 	kFunctionProto,
 	kFunctionBody,
 	kFunctionBridge,
+	kUp,
 };
 
 
@@ -26,6 +27,7 @@ class StringValue;
 class FunctionProtoValue;
 class FunctionBodyValue;
 class FunctionBridgeValue;
+class UpValue;
 
 class Value {
 public:
@@ -44,6 +46,8 @@ public:
 	NumberValue* GetNumber();
 
 	StringValue* GetString();
+
+	UpValue* GetUp();
 
 };
 
@@ -110,10 +114,11 @@ public:
 public:
 	uint32_t parCount;
 	InstrSection instrSect;
+	std::vector<std::unique_ptr<Value>> varSect;
 };
 
-typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, std::vector<std::unique_ptr<Value>>* stack);
 
+typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, std::vector<std::unique_ptr<Value>>* stack);
 class FunctionBridgeValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;
@@ -145,7 +150,18 @@ public:
 	
 };
 
+class UpValue : public Value {
+public:
+	virtual ValueType GetType() const noexcept;
 
+	virtual std::unique_ptr<Value> Copy() const;
+
+	UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto);
+
+public:
+	uint32_t index;
+	FunctionBodyValue* funcProto;
+};
 
 } // namespace vm
 
