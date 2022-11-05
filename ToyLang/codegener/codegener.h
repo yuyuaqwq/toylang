@@ -9,6 +9,7 @@
 #include "vm/instr.h"
 #include "vm/value.h"
 #include "vm/vm.h"
+#include "vm/section.h"
 
 #include "ast/stat.h"
 #include "ast/exp.h"
@@ -57,8 +58,8 @@ public:
 		uint32_t constIdx;
 		auto it = m_constMap.find(value.get());
 		if (it == m_constMap.end()) {
-			m_constTable.push_back(std::move(value));
-			constIdx = m_constTable.size() - 1;
+			m_constSect.Push(std::move(value));
+			constIdx = m_constSect.Size() - 1;
 		}
 		else {
 			constIdx = it->second;
@@ -118,7 +119,7 @@ public:
 		for (auto& stat : block->statList) {
 			GenerateStat(stat.get());
 		}
-		m_vm->m_constSect = std::move(m_constTable);
+		m_vm->m_constSect = std::move(m_constSect);
 		m_curFunc->instrSect.EmitStop();
 	}
 
@@ -163,8 +164,11 @@ public:
 		case ast::StatType::kIf:
 			GenerateIfStat(static_cast<ast::IfStat*>(stat));
 			break;
-		default:
+		case ast::StatType::kReturn:
+			GenerateReturnStat(static_cast<ast::ReturnStat*>(stat));
 			break;
+		default:
+			throw CodeGenerException("Unknown statement type");
 		}
 	}
 
@@ -182,8 +186,8 @@ public:
 		auto savefunc = m_curFunc;
 
 		// 切换环境
-		EntryScope(m_constTable[constIdx]->GetFunctionBody());
-		m_curFunc = m_constTable[constIdx]->GetFunctionBody();
+		EntryScope(m_constSect.Get(constIdx)->GetFunctionBody());
+		m_curFunc = m_constSect.Get(constIdx)->GetFunctionBody();
 
 		
 		for (int i = 0; i < m_curFunc->parCount; i++) {
@@ -191,17 +195,32 @@ public:
 		}
 
 		auto block = stat->block.get();
-		for (auto& stat : block->statList) {
+		for (int i = 0; i < block->statList.size(); i++) {
+			auto& stat = block->statList[i];
 			GenerateStat(stat.get());
+			if (i == block->statList.size() - 1) {
+				if (stat->GetType() != ast::StatType::kReturn) {
+					// 补全末尾的return
+					m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NullValue>()));
+					m_curFunc->instrSect.EmitRet();
+				}
+			}
 		}
-		m_curFunc->instrSect.EmitRet();
-
 
 		// 恢复环境
 		ExitScope();
 		m_curFunc = savefunc;
 	}
 
+	void GenerateReturnStat(ast::ReturnStat* stat) {
+		if (stat->exp.get()) {
+			GenerateExp(stat->exp.get());
+		}
+		else {
+			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NullValue>()));
+		}
+		m_curFunc->instrSect.EmitRet();
+	}
 
 	// 局部变量在此无法提前得知总共需要多少，因此不能分配到栈上
 	// 解决方案：
@@ -235,15 +254,15 @@ public:
 		GenerateExp(stat->exp.get());		// 表达式结果压栈
 
 		
-		uint32_t pc = m_curFunc->instrSect.GetPc() + 1;
+		uint32_t ifpc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
 		m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳转的指令
 
 		GenerateBlock(stat->block.get());
 
-		// 条件为false，跳转到if块之后
-		*(uint32_t*)m_curFunc->instrSect.GetPtr(pc) = m_curFunc->instrSect.GetPc();
+		
 		
 		// if
+		
 		// jcf end
 		// ...
 	// end:
@@ -260,7 +279,6 @@ public:
 		// ...
 	// end:
 		// ....
-
 
 
 		// if 
@@ -280,9 +298,64 @@ public:
 		// ....
 
 
-		for (auto& elifStat : stat->elifStatList) {
+		// if 
+		// elif
+		// elif
+		// else
 
+		// jcf elif1
+		// ...
+		// jmp end
+	// elif1:
+		// jcf elif2
+		// ...
+		// jmp end
+	// elif2:
+		// jcf else
+		// ...
+		// jmp end
+	// else:
+		// ...
+	// end:
+		// ....
+
+		std::vector<uint32_t> endPcList;
+		for (auto& elifStat : stat->elifStatList) {
+			endPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
+			m_curFunc->instrSect.EmitJmp(0);		// 提前写入上一分支退出if分支结构的jmp跳转
+
+			// 修复条件为false时，跳转到if/elif块之后的地址
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+
+			GenerateExp(elifStat->exp.get());		// 表达式结果压栈
+			ifpc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
+			m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳转的指令
+
+			GenerateBlock(elifStat->block.get());
 		}
+
+		
+
+		if (stat->elseStat.get()) {
+			endPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
+			m_curFunc->instrSect.EmitJmp(0);		// 提前写入上一分支退出if分支结构的jmp跳转
+
+			// 修复条件为false时，跳转到if/elif块之后的地址
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+
+			GenerateBlock(stat->elseStat->block.get());
+		}
+		else {
+			// 修复条件为false时，跳转到if/elif块之后的地址
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+		}
+
+		// 至此if分支结构结束，修复所有退出分支结构的地址
+		for (auto endPc : endPcList) {
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(endPc) = m_curFunc->instrSect.GetPc();
+		}
+		
+
 
 	}
 
@@ -348,6 +421,9 @@ public:
 			case lexer::TokenType::kOpDiv:
 				m_curFunc->instrSect.EmitDiv();
 				break;
+			case lexer::TokenType::kOpNe:
+				m_curFunc->instrSect.EmitNe();
+				break;
 			case lexer::TokenType::kOpEq:
 				m_curFunc->instrSect.EmitEq();
 				break;
@@ -380,10 +456,12 @@ public:
 			//	throw CodeGenerException("Wrong number of parameters passed during function call");
 			//}
 
-			for (auto& parexp : funcCallExp->parList) {
-				// 参数入栈，由call负责将栈中参数放到变量表中
-				GenerateExp(parexp.get());
+			for (int i = funcCallExp->parList.size() - 1; i >= 0; i--) {
+				// 参数逆序入栈，由call负责将栈中参数放到变量表中
+				GenerateExp(funcCallExp->parList[i].get());
 			}
+
+			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NumberValue>(funcCallExp->parList.size())));
 
 			// 函数原型存放在变量表中
 			m_curFunc->instrSect.EmitCall(varIdx);
@@ -404,7 +482,7 @@ private:
 
 	// 暂时有问题，指针就没办法找重载<了
 	std::map<vm::Value*, uint32_t> m_constMap;
-	std::vector<std::unique_ptr<vm::Value>> m_constTable;		// 全局常量表
+	vm::ValueSection m_constSect;		// 全局常量区
 
 	std::vector<Scope> m_scope;
 };

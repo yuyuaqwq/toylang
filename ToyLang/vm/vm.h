@@ -10,6 +10,7 @@
 
 #include "vm/instr.h"
 #include "vm/value.h"
+#include "vm/section.h"
 
 namespace codegener{
 class CodeGener;
@@ -39,18 +40,18 @@ public:
 	}
 
 	Value* GetVar(uint32_t idx) {
-		if (m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
+		if (m_curFunc->varSect.Get(idx)->GetType() == ValueType::kUp) {
 			// upvalue可能形成链表(代码生成阶段，根据从外层作用域名字找到了变量，但是该变量实际上也是upvalue)，因此要重复向上找直到不是upvalue
 			// 有时间可以从代码生成那边优化，也是做循环向上找，直到不再指向upvalue
 			auto func = m_curFunc;
-			auto upvalue = func->varSect[idx]->GetUp();
-			while (upvalue->funcProto->varSect[upvalue->index]->GetType() == ValueType::kUp) {
+			auto upvalue = func->varSect.Get(idx)->GetUp();
+			while (upvalue->funcProto->varSect.Get(upvalue->index)->GetType() == ValueType::kUp) {
 				func = upvalue->funcProto;
-				upvalue = func->varSect[upvalue->index]->GetUp();
+				upvalue = func->varSect.Get(upvalue->index)->GetUp();
 			}
-			return upvalue->funcProto->varSect[upvalue->index].get();
+			return upvalue->funcProto->varSect.Get(upvalue->index).get();
 		}
-		return m_curFunc->varSect[idx].get();
+		return m_curFunc->varSect.Get(idx).get();
 	}
 
 	std::unique_ptr<Value> GetVarCopy(uint32_t idx) {
@@ -58,20 +59,22 @@ public:
 	}
 
 	void SetVar(uint32_t idx, std::unique_ptr<Value> var) {
-		if (idx >= m_curFunc->varSect.size()) {
-			m_curFunc->varSect.resize(idx + 1);
+		if (idx >= m_curFunc->varSect.Size()) {
+			m_curFunc->varSect.ReSize(idx + 1);
 		}
-		else if (m_curFunc->varSect[idx].get() && m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
+
+		else if (m_curFunc->varSect.Get(idx).get() && m_curFunc->varSect.Get(idx)->GetType() == ValueType::kUp) {
 			auto func = m_curFunc;
-			auto upvalue = func->varSect[idx]->GetUp();
-			while (upvalue->funcProto->varSect[upvalue->index]->GetType() == ValueType::kUp) {
+			auto upvalue = func->varSect.Get(idx)->GetUp();
+			while (upvalue->funcProto->varSect.Get(upvalue->index)->GetType() == ValueType::kUp) {
 				func = upvalue->funcProto;
-				upvalue = func->varSect[upvalue->index]->GetUp();
+				upvalue = func->varSect.Get(upvalue->index)->GetUp();
 			}
-			upvalue->funcProto->varSect[upvalue->index] = std::move(var);
+			upvalue->funcProto->varSect.Set(upvalue->index, std::move(var));
 			return;
 		}
-		m_curFunc->varSect[idx] = std::move(var);
+
+		m_curFunc->varSect.Set(idx, std::move(var));
 	}
 
 	void SetVar(uint32_t idx, Value* var) {
@@ -90,67 +93,66 @@ public:
 			case OpcodeType::kPushK: {
 				auto constIdx = m_curFunc->instrSect.GetU32(m_pc);
 				m_pc += 4;
-				m_stackSect.push_back(m_constSect[constIdx]->Copy());
+				m_stackSect.Push(m_constSect.Get(constIdx)->Copy());
 				break;
 			}
 			case OpcodeType::kPushV: {
 				auto varIdx = m_curFunc->instrSect.GetU32(m_pc);
 				m_pc += 4;
-				m_stackSect.push_back(GetVarCopy(varIdx));
+				m_stackSect.Push(GetVarCopy(varIdx));
 				break;
 			}
 			case OpcodeType::kPop: {
-				m_stackSect.pop_back();
+				m_stackSect.Pop();
 				break;
 			}
 			case OpcodeType::kPopV: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
 				auto varIdx = m_curFunc->instrSect.GetU32(m_pc);
 				m_pc += 4;
-				SetVar(varIdx, std::move(a));
-				m_stackSect.pop_back();
+				SetVar(varIdx, m_stackSect.Pop());
 				break;
 			}
 			case OpcodeType::kAdd: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				b->GetNumber()->value += a->GetNumber()->value;
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kSub: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				b->GetNumber()->value -= a->GetNumber()->value;
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kMul: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				b->GetNumber()->value *= a->GetNumber()->value;
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kDiv: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				b->GetNumber()->value /= a->GetNumber()->value;
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kCall: {
-				// 先将栈中的参数移动到变量表中
-
 				auto varIdx = m_curFunc->instrSect.GetU32(m_pc);
 				m_pc += 4;
+
 				auto value = GetVar(varIdx)->GetFunctionProto()->value;
+
+				auto parCount = m_stackSect.Pop()->GetBool()->value;
 
 				if (value->GetType() == ValueType::kFunctionBody) {
 					
 					auto callFunc = value->GetFunctionBody();
 
-					printf("%s\n", callFunc->Disassembly().c_str());
+					//printf("%s\n", callFunc->Disassembly().c_str());
+
+					if (parCount < callFunc->parCount) {
+						throw VMException("Wrong number of parameters passed when calling the function");
+					}
 
 					auto saveFunc = m_curFunc;
 					auto savePc = m_pc;
@@ -162,18 +164,17 @@ public:
 					// 移动栈上的参数到新函数的局部变量表
 					//m_varIdxBase = m_varSect.size();
 					for (int i = m_curFunc->parCount - 1; i >= 0; i--) {
-						SetVar(i, std::move(m_stackSect[m_stackSect.size() - 1]));
-						m_stackSect.pop_back();
+						SetVar(i, std::move(m_stackSect.Pop()));
 					}
 
 					// 保存当前环境
-					m_stackSect.push_back(std::make_unique<NumberValue>((uint64_t)saveFunc));
-					m_stackSect.push_back(std::make_unique<NumberValue>(savePc));
+					m_stackSect.Push(std::make_unique<NumberValue>((uint64_t)saveFunc));
+					m_stackSect.Push(std::make_unique<NumberValue>(savePc));
 					
 				}
 				else if (value->GetType() == ValueType::kFunctionBridge) {
 					auto callFunc = value->GetFunctionBirdge();
-					callFunc->funcAddr(1, &m_stackSect);
+					m_stackSect.Push(callFunc->funcAddr(parCount, &m_stackSect));
 				}
 				else {
 					throw VMException("Wrong call type");
@@ -181,65 +182,63 @@ public:
 				break;
 			}
 			case OpcodeType::kRet: {
-				auto& retValue = m_stackSect[m_stackSect.size() - 1];
-				auto& pc = m_stackSect[m_stackSect.size() - 2];
-				auto& curFunc = m_stackSect[m_stackSect.size() - 3];
+				auto retValue = m_stackSect.Pop();
+				auto pc = m_stackSect.Pop();
+				auto& curFunc = m_stackSect.Get(-1);
 
 				// 恢复环境
 				m_curFunc = (FunctionBodyValue*)curFunc->GetNumber()->value;
 				m_pc = pc->GetNumber()->value;
 
 				curFunc = std::move(retValue);
-				m_stackSect.pop_back();
-				m_stackSect.pop_back();
+				break;
+			}
+			case OpcodeType::kNe: {
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
+				bool res = !(* a == *b);
+				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kEq: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				bool res = *a == *b;
 				b = std::move(std::make_unique<BoolValue>(res));
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kLt: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				bool res = *a < *b;
 				b = std::move(std::make_unique<BoolValue>(res));
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kLe: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				bool res = *a <= *b;
 				b = std::move(std::make_unique<BoolValue>(res));
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kGt: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				bool res = !(*a <= *b);
 				b = std::move(std::make_unique<BoolValue>(res));
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kGe: {
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto& b = m_stackSect[m_stackSect.size() - 2];
+				auto a = m_stackSect.Pop();
+				auto& b = m_stackSect.Get(-1);
 				bool res = !(*a < *b);
 				b = std::move(std::make_unique<BoolValue>(res));
-				m_stackSect.pop_back();
 				break;
 			}
 			case OpcodeType::kJcf: {
 				auto newPc = m_curFunc->instrSect.GetU32(m_pc);
 				m_pc += 4;
-				auto& a = m_stackSect[m_stackSect.size() - 1];
-				auto boolValue = a->GetBool()->value;
-				m_stackSect.pop_back();
+				auto boolValue = m_stackSect.Pop()->GetBool()->value;
 				if (boolValue == false) {
 					m_pc = newPc;
 				}
@@ -260,8 +259,9 @@ private:
 	uint32_t m_pc;
 	FunctionBodyValue m_mainFunc;
 	FunctionBodyValue* m_curFunc;
-	std::vector<std::unique_ptr<Value>> m_stackSect;
-	std::vector<std::unique_ptr<Value>> m_constSect;
+	ValueSection m_stackSect;
+	// std::vector<std::unique_ptr<Value>> m_stackSect;
+	ValueSection m_constSect;
 	
 };
 

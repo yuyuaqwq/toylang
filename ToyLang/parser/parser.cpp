@@ -148,11 +148,12 @@ unique_ptr<IfStat> Parser::ParseIfStat() {
 	auto token = m_lexer->LookAHead();
 	while (token.Is(TokenType::kKwElif)) {
 		elifStatList.push_back(ParseElifStat());
+		token = m_lexer->LookAHead();
 	}
 	
 	unique_ptr<ElseStat> elseStat;
 	if (token.Is(TokenType::kKwElse)) {
-		elseStat = std::move(ParseElseStat());
+		elseStat = ParseElseStat();
 	}
 
 	return make_unique<IfStat>(std::move(exp), std::move(block), std::move(elifStatList), std::move(elseStat));
@@ -234,7 +235,7 @@ unique_ptr<Exp> Parser::ParseExp3() {
 	auto exp = ParseExp2();
 	do {
 		auto type = m_lexer->LookAHead().type;
-		if (type != TokenType::kOpEq && type != TokenType::kOpLt && type != TokenType::kOpLe && type != TokenType::kOpGt && type != TokenType::kOpGe) {
+		if (type != TokenType::kOpNe && type != TokenType::kOpEq && type != TokenType::kOpLt && type != TokenType::kOpLe && type != TokenType::kOpGt && type != TokenType::kOpGe) {
 			break;
 		}
 		m_lexer->NextToken();

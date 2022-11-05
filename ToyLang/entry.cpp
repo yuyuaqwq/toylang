@@ -54,7 +54,7 @@ int main() {
     } while (true);*/
 
     std::fstream srcFile;
-    srcFile.open(R"(C:\Users\GT1\Desktop\test.toy)");
+    srcFile.open(R"(C:\Users\14548\Desktop\test.toy)");
 
     srcFile.seekg(0, std::ios::end);
     std::streampos length = srcFile.tellg();
@@ -72,23 +72,24 @@ int main() {
     CodeGener cg(&vvm);
 
     cg.RegistryFunctionBridge("println", 
-        [](uint32_t parCount, std::vector<std::unique_ptr<Value>>* stack)->std::unique_ptr<Value> {       // Toy_Println
-            auto val = stack->operator[](stack->size() - 1).get();
-            if (val->GetType() == vm::ValueType::kString) {
-                printf("%s\n", stack->operator[](stack->size() - 1)->GetString()->value.c_str());
+        [](uint32_t parCount, ValueSection* stack)->std::unique_ptr<Value> {       // Toy_Println
+            for (int i = 0; i < parCount; i++) {
+                auto val = stack->Pop();
+                if (val->GetType() == vm::ValueType::kString) {
+                    printf("%s\n", val->GetString()->value.c_str());
+                }
+                else if (val->GetType() == vm::ValueType::kNumber) {
+                    printf("%lld\n", val->GetNumber()->value);
+                }
             }
-            else if (val->GetType() == vm::ValueType::kNumber) {
-                printf("%lld\n", stack->operator[](stack->size() - 1)->GetNumber()->value);
-            }
-            stack->pop_back();
-            return nullptr;
+            return std::make_unique<NullValue>();
         }
     );
 
 
     cg.Generate(src.get());
 
-    printf("%s\n", vvm.Disassembly().c_str());
+    // printf("%s\n", vvm.Disassembly().c_str());
 
     vvm.Run();
 

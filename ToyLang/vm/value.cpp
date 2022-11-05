@@ -226,8 +226,10 @@ FunctionBodyValue::FunctionBodyValue(uint32_t t_parCount) : parCount(t_parCount)
 std::string FunctionBodyValue::Disassembly() {
 	std::string str;
 	for (int pc = 0; pc < instrSect.container.size(); ) {
+		char buf[16] = { 0 };
+		sprintf_s(buf, "%04d    ", pc);
 		const auto& info = g_instrSymbol.find(instrSect.GetOpcode(pc++));
-		str += info->second.str + " ";
+		str += buf + info->second.str + "    ";
 		for (const auto& parSize : info->second.parSizeList) {
 			if (parSize == 4) {
 				auto ki = instrSect.GetU32(pc);

@@ -75,6 +75,9 @@
     <ClCompile Include="vm\value.cpp">
       <Filter>源文件\vm</Filter>
     </ClCompile>
+    <ClCompile Include="vm\section.cpp">
+      <Filter>源文件\vm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexer\token.h">
@@ -102,6 +105,9 @@
       <Filter>头文件\codegener</Filter>
     </ClInclude>
     <ClInclude Include="vm\value.h">
+      <Filter>头文件\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="vm\section.h">
       <Filter>头文件\vm</Filter>
     </ClInclude>
   </ItemGroup>

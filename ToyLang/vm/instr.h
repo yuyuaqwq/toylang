@@ -20,6 +20,7 @@ enum class OpcodeType {
 	kDiv,
 	kCall,
 	kRet,
+	kNe,
 	kEq,
 	kGt,
 	kGe,
@@ -124,6 +125,10 @@ public:
 
 	void EmitRet() {
 		EmitOpcode(OpcodeType::kRet);
+	}
+
+	void EmitNe() {
+		EmitOpcode(OpcodeType::kNe);
 	}
 
 	void EmitEq() {

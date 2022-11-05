@@ -38,6 +38,7 @@ enum class TokenType {
 	kOpMul,    // *
 	kOpDiv,    // /
 
+	kOpNe,	   // !=
 	kOpEq,     // ==
 	kOpLt,     // <
 	kOpLe,     // <=

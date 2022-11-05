@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "vm/instr.h"
+#include "vm/section.h"
 
 namespace vm {
 
@@ -122,11 +123,11 @@ public:
 public:
 	uint32_t parCount;
 	InstrSection instrSect;
-	std::vector<std::unique_ptr<Value>> varSect;
+	ValueSection varSect;
 };
 
 
-typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, std::vector<std::unique_ptr<Value>>* stack);
+typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, ValueSection* stack);
 class FunctionBridgeValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;

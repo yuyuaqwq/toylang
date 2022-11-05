@@ -15,12 +15,13 @@ std::map<OpcodeType, InstrInfo> g_instrSymbol {
 	{OpcodeType::kDiv, {"div", {}}},
 	{OpcodeType::kCall, {"call", {4}}},
 	{OpcodeType::kRet, {"ret", {}}},
+	{OpcodeType::kNe, {"ne", {}}},
 	{OpcodeType::kEq, {"eq", {}}},
 	{OpcodeType::kGt, {"gt", {}}},
 	{OpcodeType::kGe, {"ge", {}}},
 	{OpcodeType::kLt, {"lt", {}}},
 	{OpcodeType::kLe, {"le", {}}},
-	{OpcodeType::kJc, {"jc", {4}}},
+	{OpcodeType::kJcf, {"jcf", {4}}},
 	{OpcodeType::kJmp, {"jmp", {4}}},
 
 };

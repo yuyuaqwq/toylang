@@ -64,9 +64,31 @@ Token Lexer::NextToken() {
     }
 
     char c;
+    do {
+        // 跳过空格和换行
+        while (c = NextChar()) {
+            if (c == ' ' || c == '\t') {
+                continue;
+            }
+            else if (c == '\n') {
+                m_line++;
+            }
+            else {
+                break;
+            }
+        }
 
-    // 跳过空格
-    while ((c = NextChar()) && (c == ' ' || c == '\n'));
+        // 跳过注释
+        if (c == '/' && TestChar('/')) {
+            while ((c = NextChar()) && c != '\n');
+        }
+        else {
+            break;
+        }
+
+    } while (true);
+
+    
 
     token.line = m_line;
 
@@ -122,7 +144,13 @@ Token Lexer::NextToken() {
     case '/':
         token.type = TokenType::kOpDiv;
         return token;
-
+    case '!':
+        if (TestChar('=')) {
+            SkipChar(1);
+            token.type = TokenType::kOpNe;
+            return token;
+        }
+        break;
     case '=':
         if (TestChar('=')) {
             SkipChar(1);
