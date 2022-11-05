@@ -40,8 +40,8 @@ public:
 
 	Value* GetVar(uint32_t idx) {
 		if (m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
-			// 闭包可能形成链表(内部向外层作用域找，根据名字找到了变量，但是该变量实际上也是闭包)，因此要重复向上直到不是闭包
-			// 有时间可以从代码生成那边优化，找到了就循环向上找
+			// upvalue可能形成链表(代码生成阶段，根据从外层作用域名字找到了变量，但是该变量实际上也是upvalue)，因此要重复向上找直到不是upvalue
+			// 有时间可以从代码生成那边优化，也是做循环向上找，直到不再指向upvalue
 			auto func = m_curFunc;
 			auto upvalue = func->varSect[idx]->GetUp();
 			while (upvalue->funcProto->varSect[upvalue->index]->GetType() == ValueType::kUp) {
@@ -62,9 +62,13 @@ public:
 			m_curFunc->varSect.resize(idx + 1);
 		}
 		else if (m_curFunc->varSect[idx].get() && m_curFunc->varSect[idx]->GetType() == ValueType::kUp) {
-			// 如果被写入的是捕获变量
-			auto upvalue = m_curFunc->varSect[idx]->GetUp();
-			upvalue->funcProto->varSect.at(upvalue->index) = std::move(var);
+			auto func = m_curFunc;
+			auto upvalue = func->varSect[idx]->GetUp();
+			while (upvalue->funcProto->varSect[upvalue->index]->GetType() == ValueType::kUp) {
+				func = upvalue->funcProto;
+				upvalue = func->varSect[upvalue->index]->GetUp();
+			}
+			upvalue->funcProto->varSect[upvalue->index] = std::move(var);
 			return;
 		}
 		m_curFunc->varSect[idx] = std::move(var);
