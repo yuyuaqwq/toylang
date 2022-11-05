@@ -138,7 +138,14 @@ public:
 			break;
 		}
 		case ast::StatType::kExp: {
-			GenerateExp(static_cast<ast::ExpStat*>(stat)->exp.get());
+			auto expStat = static_cast<ast::ExpStat*>(stat)->exp.get();
+
+			// 抛弃纯表达式语句的最终结果
+			 if (expStat) {
+				 GenerateExp(expStat);
+				 m_curFunc->instrSect.EmitPop();		
+			 }
+			
 			break;
 		}
 		case ast::StatType::kFuncDef: {

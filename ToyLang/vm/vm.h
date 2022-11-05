@@ -99,6 +99,10 @@ public:
 				m_stackSect.push_back(GetVarCopy(varIdx));
 				break;
 			}
+			case OpcodeType::kPop: {
+				m_stackSect.pop_back();
+				break;
+			}
 			case OpcodeType::kPopV: {
 				auto& a = m_stackSect[m_stackSect.size() - 1];
 				auto varIdx = m_curFunc->instrSect.GetU32(m_pc);

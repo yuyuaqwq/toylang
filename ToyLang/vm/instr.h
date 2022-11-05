@@ -12,6 +12,7 @@ enum class OpcodeType {
 	kNop,
 	kPushK,
 	kPushV,
+	kPop,
 	kPopV,
 	kAdd,
 	kSub,
@@ -77,6 +78,10 @@ public:
 		EmitU32(sk);
 	}
 
+	void EmitPop() {
+		EmitOpcode(OpcodeType::kPop);
+	}
+
 	void EmitPushV(uint32_t sv) {
 		EmitOpcode(OpcodeType::kPushV);
 		EmitU32(sv);
@@ -86,6 +91,7 @@ public:
 		EmitOpcode(OpcodeType::kPopV);
 		EmitU32(dv);
 	}
+
 
 	void EmitAdd() {
 		EmitOpcode(OpcodeType::kAdd);

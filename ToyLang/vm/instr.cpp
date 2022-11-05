@@ -7,6 +7,7 @@ std::map<OpcodeType, InstrInfo> g_instrSymbol {
 	{OpcodeType::kNop, {"nop", {}}},
 	{OpcodeType::kPushK, {"pushk", {4}}},
 	{OpcodeType::kPushV, {"pushv", {4}}},
+	{OpcodeType::kPop, {"pop", {}}},
 	{OpcodeType::kPopV, {"popv", {4}}},
 	{OpcodeType::kAdd, {"add", {}}},
 	{OpcodeType::kSub, {"sub", {}}},
