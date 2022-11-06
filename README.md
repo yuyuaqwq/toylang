@@ -39,7 +39,7 @@ funcCallExp = ident '(' parList ')'
 
 ``` toyir
 变长指令集，v表示变量，k表示常量
-1字节使用低7位，高1位保留
+opcode占1字节，使用低7位，高1位保留
 stop
 nop
 pushv vi
