@@ -39,127 +39,62 @@ extern std::map<OpcodeType, InstrInfo> g_instrSymbol;
 
 class InstrSection {
 public:
-	uint8_t* GetPtr(uint32_t pc) {
-		return container.data() + pc;
-	}
+	uint8_t* GetPtr(uint32_t pc);
 
-	uint32_t GetPc() {
-		return container.size();
-	}
+	uint32_t GetPc();
 
-	OpcodeType GetOpcode(uint32_t pc) {
-		return (OpcodeType)container[pc];
-	}
+	OpcodeType GetOpcode(uint32_t pc);
 
-	uint8_t GetU8(uint32_t pc) {
-		return *(uint8_t*)&container[pc];
-	}
+	uint8_t GetU8(uint32_t pc);
 
-	uint32_t GetU32(uint32_t pc) {
-		return *(uint32_t*)&container[pc];
-	}
+	uint32_t GetU32(uint32_t pc);
 
-	void EmitOpcode(OpcodeType opcode) {
-		container.push_back((uint8_t)opcode);
-	}
+	void EmitOpcode(OpcodeType opcode);
 
-	void EmitU8(uint8_t val) {
-		container.push_back(val);
-	}
+	void EmitU8(uint8_t val);
 
-	void EmitU32(uint32_t val) {
-		container.push_back(val);
-		container.push_back(val >> 8);
-		container.push_back(val >> 16);
-		container.push_back(val >> 24);
-	}
+	void EmitU32(uint32_t val);
 
-	void EmitStop() {
-		EmitOpcode(OpcodeType::kStop);
-	}
+	void EmitStop();
 
-	void EmitNop() {
-		EmitOpcode(OpcodeType::kNop);
-	}
+	void EmitNop();
 
-	void EmitPushK(uint32_t sk) {
-		EmitOpcode(OpcodeType::kPushK);
-		EmitU32(sk);
-	}
+	void EmitPushK(uint32_t sk);
 
-	void EmitPop() {
-		EmitOpcode(OpcodeType::kPop);
-	}
+	void EmitPop();
 
-	void EmitPushV(uint32_t sv) {
-		EmitOpcode(OpcodeType::kPushV);
-		EmitU32(sv);
-	}
+	void EmitPushV(uint32_t sv);
 
-	void EmitPopV(uint32_t dv) {
-		EmitOpcode(OpcodeType::kPopV);
-		EmitU32(dv);
-	}
+	void EmitPopV(uint32_t dv);
 
 
-	void EmitAdd() {
-		EmitOpcode(OpcodeType::kAdd);
-	}
+	void EmitAdd();
 
-	void EmitSub() {
-		EmitOpcode(OpcodeType::kSub);
-	}
+	void EmitSub();
 
-	void EmitMul() {
-		EmitOpcode(OpcodeType::kMul);
-	}
+	void EmitMul();
 
-	void EmitDiv() {
-		EmitOpcode(OpcodeType::kDiv);
-	}
+	void EmitDiv();
 
-	void EmitCall(uint32_t sv) {
-		EmitOpcode(OpcodeType::kCall);
-		EmitU32(sv);
-	}
+	void EmitCall(uint32_t sv);
 
-	void EmitRet() {
-		EmitOpcode(OpcodeType::kRet);
-	}
+	void EmitRet();
 
-	void EmitNe() {
-		EmitOpcode(OpcodeType::kNe);
-	}
+	void EmitNe();
 
-	void EmitEq() {
-		EmitOpcode(OpcodeType::kEq);
-	}
+	void EmitEq();
 
-	void EmitGt() {
-		EmitOpcode(OpcodeType::kGt);
-	}
+	void EmitGt();
 
-	void EmitGe() {
-		EmitOpcode(OpcodeType::kGe);
-	}
+	void EmitGe();
 
-	void EmitLt() {
-		EmitOpcode(OpcodeType::kLt);
-	}
+	void EmitLt();
 
-	void EmitLe() {
-		EmitOpcode(OpcodeType::kLe);
-	}
+	void EmitLe();
 
-	void EmitJcf(uint32_t i) {
-		EmitOpcode(OpcodeType::kJcf);
-		EmitU32(i);
-	}
+	void EmitJcf(uint32_t i);
 
-	void EmitJmp(uint32_t i) {
-		EmitOpcode(OpcodeType::kJmp);
-		EmitU32(i);
-	}
+	void EmitJmp(uint32_t i);
 
 public:
 	std::vector<uint8_t> container;

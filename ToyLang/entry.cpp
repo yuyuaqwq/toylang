@@ -1,5 +1,7 @@
-﻿#include <fstream>
+﻿#include <Windows.h>
 
+
+#include <fstream>
 
 
 #include "lexer/lexer.h"
@@ -21,6 +23,13 @@ int main() {
     using namespace codegener;
     using namespace vm;
     using namespace value;
+
+    auto t = GetTickCount64();
+    int i = 0;
+    for (; i < 100000000; i++) {
+        ++i;
+    }
+    printf("%d, %lld", i, GetTickCount64() - t);
 
 
     std::fstream srcFile;
@@ -57,6 +66,13 @@ int main() {
         }
     );
 
+    cg.RegistryFunctionBridge("tick",
+        [](uint32_t parCount, ValueSection* stack)->std::unique_ptr<Value> {       // Toy_Tick
+            return std::make_unique<NumberValue>(GetTickCount64());
+        }
+    );
+
+
     // printf("%s\n", vvm.Disassembly().c_str());
 
     cg.Generate(src.get(), constSect.get());
@@ -64,6 +80,10 @@ int main() {
     VM vvm(constSect.get());
 
     vvm.Run();
+
+
+
+
 
     //auto exp = parser.ParseExp();
 
