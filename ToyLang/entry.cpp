@@ -20,38 +20,8 @@ int main() {
     using namespace parser;
     using namespace codegener;
     using namespace vm;
+    using namespace value;
 
-    //Lexer lexer{ "1 + 33 - 0 * (33 / 999) - 123" };
-    /*do {
-        auto token = lexer.NextToken();
-        if (token.Is(TokenType::kEof)) {
-            break;
-        }
-
-        switch (token.type) {
-        case TokenType::kNumber:{
-            printf("%s\n", token.str.c_str()); break;
-        }
-        case TokenType::kOpAdd: {
-            printf("+\n"); break;
-        }
-        case TokenType::kOpDiv: {
-            printf("/\n"); break;
-        }
-        case TokenType::kOpMul: {
-            printf("*\n"); break;
-        }
-        case TokenType::kOpSub: {
-            printf("-\n"); break;
-        }
-        case TokenType::kSepLParen: {
-            printf("(\n"); break;
-        }
-        case TokenType::kSepRParen: {
-            printf(")\n"); break;
-        }
-        }
-    } while (true);*/
 
     std::fstream srcFile;
     srcFile.open(R"(C:\Users\14548\Desktop\test.toy)");
@@ -68,18 +38,18 @@ int main() {
     auto src = parser.ParseSource();
 
     
-    VM vvm;
-    CodeGener cg(&vvm);
+    auto constSect = std::make_unique<ValueSection>();
+    CodeGener cg(constSect.get()); 
 
     cg.RegistryFunctionBridge("println", 
         [](uint32_t parCount, ValueSection* stack)->std::unique_ptr<Value> {       // Toy_Println
             for (int i = 0; i < parCount; i++) {
                 auto val = stack->Pop();
-                if (val->GetType() == vm::ValueType::kString) {
-                    printf("%s", val->GetString()->value.c_str());
+                if (val->GetType() == ValueType::kString) {
+                    printf("%s", val->GetString()->val.c_str());
                 }
-                else if (val->GetType() == vm::ValueType::kNumber) {
-                    printf("%lld", val->GetNumber()->value);
+                else if (val->GetType() == ValueType::kNumber) {
+                    printf("%lld", val->GetNumber()->val);
                 }
             }
             printf("\n");
@@ -87,10 +57,11 @@ int main() {
         }
     );
 
-
-    cg.Generate(src.get());
-
     // printf("%s\n", vvm.Disassembly().c_str());
+
+    cg.Generate(src.get(), constSect.get());
+
+    VM vvm(constSect.get());
 
     vvm.Run();
 

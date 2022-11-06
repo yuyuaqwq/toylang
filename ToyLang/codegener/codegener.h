@@ -7,9 +7,10 @@
 #include <string>
 
 #include "vm/instr.h"
-#include "vm/value.h"
 #include "vm/vm.h"
-#include "vm/section.h"
+
+#include "value/value.h"
+#include "value/section.h"
 
 #include "ast/stat.h"
 #include "ast/exp.h"
@@ -17,7 +18,7 @@
 namespace codegener {
 
 struct Scope {
-	vm::FunctionBodyValue* m_func;		// 作用域所属函数
+	value::FunctionBodyValue* m_func;		// 作用域所属函数
 	uint32_t varCount;		// 当前函数在当前作用域中的有效变量计数
 	std::map<std::string, uint32_t> m_varTable;		// 变量表，key为变量索引
 };
@@ -28,19 +29,22 @@ struct Scope {
 class CodeGenerException : public std::exception{
 public:
 	CodeGenerException(const char* t_msg) : std::exception(t_msg) {
-
+		
 	}
 };
 
 
 class CodeGener {
 public:
-	CodeGener(vm::VM* t_vm) : m_vm{ t_vm }, m_curLoopRepairEndPcList{ nullptr } {
-		m_curFunc = &m_vm->m_mainFunc;
+	CodeGener(value::ValueSection* t_constSect) : m_constSect(t_constSect), m_curLoopRepairEndPcList{ nullptr } {
+		t_constSect->Clear();
+		t_constSect->Push(std::make_unique<value::FunctionBodyValue>(0));
+		m_curFunc = t_constSect->Get(0)->GetFunctionBody();
+
 		m_scope.push_back(Scope{ m_curFunc });
 	}
 
-	void EntryScope(vm::FunctionBodyValue* subFunc = nullptr) {
+	void EntryScope(value::FunctionBodyValue* subFunc = nullptr) {
 		if (!subFunc) {
 			// 进入的作用域不是新函数
 			m_scope.push_back(Scope{ m_curFunc, m_scope[m_scope.size() - 1].varCount });
@@ -54,12 +58,12 @@ public:
 		m_scope.pop_back();
 	}
 
-	uint32_t AllocConst(std::unique_ptr<vm::Value> value) {
+	uint32_t AllocConst(std::unique_ptr<value::Value> value) {
 		uint32_t constIdx;
 		auto it = m_constMap.find(value.get());
 		if (it == m_constMap.end()) {
-			m_constSect.Push(std::move(value));
-			constIdx = m_constSect.Size() - 1;
+			m_constSect->Push(std::move(value));
+			constIdx = m_constSect->Size() - 1;
 		}
 		else {
 			constIdx = it->second;
@@ -90,7 +94,7 @@ public:
 				}
 				else {
 					// 引用外部函数的变量，需要捕获，为当前函数加载upvalue变量
-					auto constIdx = AllocConst(std::make_unique<vm::UpValue>(it->second, m_scope[i].m_func));
+					auto constIdx = AllocConst(std::make_unique<value::UpValue>(it->second, m_scope[i].m_func));
 					m_curFunc->instrSect.EmitPushK(constIdx);
 					varIdx = AllocVar(varName);
 					m_curFunc->instrSect.EmitPopV(varIdx);
@@ -102,9 +106,9 @@ public:
 	}
 
 
-	void RegistryFunctionBridge(std::string funcName, vm::FunctionBridgeCall funcAddr) {
+	void RegistryFunctionBridge(std::string funcName, value::FunctionBridgeCall funcAddr) {
 		auto varIdx = AllocVar(funcName);
-		auto constIdx = AllocConst(std::make_unique<vm::FunctionBridgeValue>(funcAddr));
+		auto constIdx = AllocConst(std::make_unique<value::FunctionBridgeValue>(funcAddr));
 
 
 		// 生成将函数放到变量表中的代码
@@ -114,13 +118,13 @@ public:
 	}
 
 
-	void Generate(ast::BlockStat* block) {
-		
+	void Generate(ast::BlockStat* block, value::ValueSection* constSect) {
+
 		for (auto& stat : block->statList) {
 			GenerateStat(stat.get());
 		}
-		m_vm->m_constSect = std::move(m_constSect);
 		m_curFunc->instrSect.EmitStop();
+
 	}
 
 	void GenerateBlock(ast::BlockStat* block) {
@@ -189,7 +193,7 @@ public:
 
 	void GenerateFuncDefStat(ast::FuncDefStat* stat) {
 		auto varIdx = AllocVar(stat->funcName);
-		auto constIdx = AllocConst(std::make_unique<vm::FunctionBodyValue>(stat->parList.size()));
+		auto constIdx = AllocConst(std::make_unique<value::FunctionBodyValue>(stat->parList.size()));
 
 		// 生成将函数放到变量表中的代码
 		// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
@@ -201,8 +205,8 @@ public:
 		auto savefunc = m_curFunc;
 
 		// 切换环境
-		EntryScope(m_constSect.Get(constIdx)->GetFunctionBody());
-		m_curFunc = m_constSect.Get(constIdx)->GetFunctionBody();
+		EntryScope(m_constSect->Get(constIdx)->GetFunctionBody());
+		m_curFunc = m_constSect->Get(constIdx)->GetFunctionBody();
 
 		
 		for (int i = 0; i < m_curFunc->parCount; i++) {
@@ -216,7 +220,7 @@ public:
 			if (i == block->statList.size() - 1) {
 				if (stat->GetType() != ast::StatType::kReturn) {
 					// 补全末尾的return
-					m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NullValue>()));
+					m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NullValue>()));
 					m_curFunc->instrSect.EmitRet();
 				}
 			}
@@ -232,7 +236,7 @@ public:
 			GenerateExp(stat->exp.get());
 		}
 		else {
-			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NullValue>()));
+			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NullValue>()));
 		}
 		m_curFunc->instrSect.EmitRet();
 	}
@@ -427,25 +431,25 @@ public:
 		switch (exp->GetType())
 		{
 		case ast::ExpType::kNull: {
-			auto constIdx = AllocConst(std::make_unique<vm::NullValue>());
+			auto constIdx = AllocConst(std::make_unique<value::NullValue>());
 			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kBool: {
 			auto boolexp = static_cast<ast::BoolExp*>(exp);
-			auto constIdx = AllocConst(std::make_unique<vm::BoolValue>(boolexp->value));
+			auto constIdx = AllocConst(std::make_unique<value::BoolValue>(boolexp->value));
 			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kNumber: {
 			auto numexp = static_cast<ast::NumberExp*>(exp);
-			auto constIdx = AllocConst(std::make_unique<vm::NumberValue>(numexp->value));
+			auto constIdx = AllocConst(std::make_unique<value::NumberValue>(numexp->value));
 			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
 		case ast::ExpType::kString: {
 			auto strexp = static_cast<ast::StringExp*>(exp);
-			auto constIdx = AllocConst(std::make_unique<vm::StringValue>(strexp->value));
+			auto constIdx = AllocConst(std::make_unique<value::StringValue>(strexp->value));
 			m_curFunc->instrSect.EmitPushK(constIdx);
 			break;
 		}
@@ -524,7 +528,7 @@ public:
 				GenerateExp(funcCallExp->parList[i].get());
 			}
 
-			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<vm::NumberValue>(funcCallExp->parList.size())));
+			m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NumberValue>(funcCallExp->parList.size())));
 
 			// 函数原型存放在变量表中
 			m_curFunc->instrSect.EmitCall(varIdx);
@@ -539,16 +543,17 @@ public:
 
 private:
 
-	vm::VM* m_vm;
+	// 函数相关
+	value::FunctionBodyValue* m_curFunc;		// 当前生成函数
 
-	vm::FunctionBodyValue* m_curFunc;		// 当前生成函数
+	// 常量相关
+	std::map<value::Value*, uint32_t> m_constMap;		// 暂时有问题，指针就没办法找重载<了
+	value::ValueSection* m_constSect;		// 全局常量区
 
-	// 暂时有问题，指针就没办法找重载<了
-	std::map<vm::Value*, uint32_t> m_constMap;
-	vm::ValueSection m_constSect;		// 全局常量区
-
+	// 作用域相关
 	std::vector<Scope> m_scope;
 
+	// 循环相关
 	uint32_t m_curLoopStartPc;
 	std::vector<uint32_t>* m_curLoopRepairEndPcList;
 };

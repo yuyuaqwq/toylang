@@ -1,8 +1,8 @@
 #include "section.h"
 
-#include "vm/value.h"
+#include "value/value.h"
 
-namespace vm {
+namespace value {
 
 void ValueSection::Push(std::unique_ptr<Value>&& value) {
 	m_container.push_back(std::move(value));
@@ -34,6 +34,10 @@ size_t ValueSection::Size() {
 
 void ValueSection::ReSize(size_t size) {
 	return m_container.resize(size);
+}
+
+void ValueSection::Clear() {
+	m_container.clear();
 }
 
 void ValueSection::operator=(ValueSection&& vs) noexcept {

@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 
-namespace vm {
+namespace value {
 
 class Value;
 class ValueSection {
@@ -22,6 +22,8 @@ public:
 	size_t Size();
 
 	void ReSize(size_t size);
+
+	void Clear();
 
 	void operator=(ValueSection&& vs) noexcept;
 

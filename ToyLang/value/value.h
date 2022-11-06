@@ -5,9 +5,10 @@
 #include <memory>
 
 #include "vm/instr.h"
-#include "vm/section.h"
 
-namespace vm {
+#include "value/section.h"
+
+namespace value {
 
 enum class ValueType {
 	kNull = 0,
@@ -77,7 +78,7 @@ public:
 	explicit BoolValue(bool t_value);
 
 public:
-	bool value;
+	bool val;
 };
 
 class NumberValue :public Value {
@@ -89,7 +90,7 @@ public:
 	explicit NumberValue(uint64_t t_value);
 
 public:
-	uint64_t value;
+	uint64_t val;
 };
 
 
@@ -102,7 +103,7 @@ public:
 	explicit StringValue(const std::string& t_value);
 
 public:
-	std::string value;
+	std::string val;
 };
 
 
@@ -122,7 +123,7 @@ public:
 
 public:
 	uint32_t parCount;
-	InstrSection instrSect;
+	vm::InstrSection instrSect;
 	ValueSection varSect;
 };
 
@@ -152,9 +153,9 @@ public:
 public:
 	union
 	{
-		Value* value;
-		FunctionBodyValue* bodyValue;
-		FunctionBridgeValue* bridgeValue;
+		Value* val;
+		FunctionBodyValue* bodyVal;
+		FunctionBridgeValue* bridgeVal;
 	};
 	
 };

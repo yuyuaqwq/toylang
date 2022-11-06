@@ -135,9 +135,9 @@
     <ClCompile Include="lexer\token.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="parser\parser.cpp" />
+    <ClCompile Include="value\section.cpp" />
+    <ClCompile Include="value\value.cpp" />
     <ClCompile Include="vm\instr.cpp" />
-    <ClCompile Include="vm\section.cpp" />
-    <ClCompile Include="vm\value.cpp" />
     <ClCompile Include="vm\vm.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -147,9 +147,9 @@
     <ClInclude Include="lexer\lexer.h" />
     <ClInclude Include="lexer\token.h" />
     <ClInclude Include="parser\parser.h" />
+    <ClInclude Include="value\section.h" />
+    <ClInclude Include="value\value.h" />
     <ClInclude Include="vm\instr.h" />
-    <ClInclude Include="vm\section.h" />
-    <ClInclude Include="vm\value.h" />
     <ClInclude Include="vm\vm.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -43,6 +43,12 @@
     <Filter Include="源文件\codegener">
       <UniqueIdentifier>{85380f83-f5e9-4c78-bed8-c21b7e993ac0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\value">
+      <UniqueIdentifier>{fe177614-2398-4ba4-b238-7bd5788ccdc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\value">
+      <UniqueIdentifier>{65fdc2cc-6918-4cf5-ba2a-a6673b4df73c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="entry.cpp">
@@ -72,11 +78,11 @@
     <ClCompile Include="codegener\codegener.cpp">
       <Filter>源文件\codegener</Filter>
     </ClCompile>
-    <ClCompile Include="vm\value.cpp">
-      <Filter>源文件\vm</Filter>
+    <ClCompile Include="value\section.cpp">
+      <Filter>源文件\value</Filter>
     </ClCompile>
-    <ClCompile Include="vm\section.cpp">
-      <Filter>源文件\vm</Filter>
+    <ClCompile Include="value\value.cpp">
+      <Filter>源文件\value</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -104,11 +110,11 @@
     <ClInclude Include="codegener\codegener.h">
       <Filter>头文件\codegener</Filter>
     </ClInclude>
-    <ClInclude Include="vm\value.h">
-      <Filter>头文件\vm</Filter>
+    <ClInclude Include="value\section.h">
+      <Filter>头文件\value</Filter>
     </ClInclude>
-    <ClInclude Include="vm\section.h">
-      <Filter>头文件\vm</Filter>
+    <ClInclude Include="value\value.h">
+      <Filter>头文件\value</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

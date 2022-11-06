@@ -1,6 +1,6 @@
 #include "value.h"
 
-namespace vm {
+namespace value {
 
 bool Value::operator<(const Value& value) const {
 	if (GetType() == value.GetType()) {
@@ -11,22 +11,22 @@ bool Value::operator<(const Value& value) const {
 		case ValueType::kBool: {
 			auto a = static_cast<const BoolValue*>(this);
 			auto b = static_cast<const BoolValue*>(&value);
-			return a->value < b->value;
+			return a->val < b->val;
 		}
 		case ValueType::kNumber: {
 			auto a = static_cast<const NumberValue*>(this);
 			auto b = static_cast<const NumberValue*>(&value);
-			return a->value < b->value;
+			return a->val < b->val;
 		}
 		case ValueType::kString: {
 			auto a = static_cast<const StringValue*>(this);
 			auto b = static_cast<const StringValue*>(&value);
-			return a->value < b->value;
+			return a->val < b->val;
 		}
 		case ValueType::kFunctionProto: {
 			auto a = static_cast<const FunctionProtoValue*>(this);
 			auto b = static_cast<const FunctionProtoValue*>(&value);
-			return a->value < b->value;
+			return a->val < b->val;
 		}
 		case ValueType::kFunctionBridge:
 		case ValueType::kFunctionBody:
@@ -47,22 +47,22 @@ bool Value::operator<=(const Value& value) const {
 		case ValueType::kBool: {
 			auto a = static_cast<const BoolValue*>(this);
 			auto b = static_cast<const BoolValue*>(&value);
-			return a->value <= b->value;
+			return a->val <= b->val;
 		}
 		case ValueType::kNumber: {
 			auto a = static_cast<const NumberValue*>(this);
 			auto b = static_cast<const NumberValue*>(&value);
-			return a->value <= b->value;
+			return a->val <= b->val;
 		}
 		case ValueType::kString: {
 			auto a = static_cast<const StringValue*>(this);
 			auto b = static_cast<const StringValue*>(&value);
-			return a->value <= b->value;
+			return a->val <= b->val;
 		}
 		case ValueType::kFunctionProto: {
 			auto a = static_cast<const FunctionProtoValue*>(this);
 			auto b = static_cast<const FunctionProtoValue*>(&value);
-			return a->value <= b->value;
+			return a->val <= b->val;
 		}
 									  
 		case ValueType::kFunctionBridge:
@@ -84,22 +84,22 @@ bool Value::operator==(const Value& value) const {
 		case ValueType::kBool: {
 			auto a = static_cast<const BoolValue*>(this);
 			auto b = static_cast<const BoolValue*>(&value);
-			return a->value && b->value;
+			return a->val && b->val;
 		}
 		case ValueType::kNumber: {
 			auto a = static_cast<const NumberValue*>(this);
 			auto b = static_cast<const NumberValue*>(&value);
-			return a->value == b->value;
+			return a->val == b->val;
 		}
 		case ValueType::kString: {
 			auto a = static_cast<const StringValue*>(this);
 			auto b = static_cast<const StringValue*>(&value);
-			return a->value == b->value;
+			return a->val == b->val;
 		}
 		case ValueType::kFunctionProto: {
 			auto a = static_cast<const FunctionProtoValue*>(this);
 			auto b = static_cast<const FunctionProtoValue*>(&value);
-			return a->value == b->value;
+			return a->val == b->val;
 		}
 		case ValueType::kFunctionBridge:
 		case ValueType::kFunctionBody:
@@ -162,10 +162,10 @@ ValueType BoolValue::GetType() const noexcept {
 }
 
 std::unique_ptr<Value> BoolValue::Copy() const {
-	return std::make_unique<BoolValue>(value);
+	return std::make_unique<BoolValue>(val);
 }
 
-BoolValue::BoolValue(bool t_value) : value(t_value) {
+BoolValue::BoolValue(bool t_val) : val(t_val) {
 
 }
 
@@ -176,10 +176,10 @@ ValueType NumberValue::GetType() const noexcept {
 }
 
 std::unique_ptr<Value> NumberValue::Copy() const {
-	return std::make_unique<NumberValue>(value);
+	return std::make_unique<NumberValue>(val);
 }
 
-NumberValue::NumberValue(uint64_t t_value) : value(t_value) {
+NumberValue::NumberValue(uint64_t t_val) : val(t_val) {
 
 }
 
@@ -189,10 +189,10 @@ ValueType StringValue::GetType() const noexcept {
 }
 
 std::unique_ptr<Value> StringValue::Copy() const {
-	return std::make_unique<StringValue>(value);
+	return std::make_unique<StringValue>(val);
 }
 
-StringValue::StringValue(const std::string& t_value) : value(t_value) {
+StringValue::StringValue(const std::string& t_val) : val(t_val) {
 
 }
 
@@ -228,7 +228,7 @@ std::string FunctionBodyValue::Disassembly() {
 	for (int pc = 0; pc < instrSect.container.size(); ) {
 		char buf[16] = { 0 };
 		sprintf_s(buf, "%04d    ", pc);
-		const auto& info = g_instrSymbol.find(instrSect.GetOpcode(pc++));
+		const auto& info = vm::g_instrSymbol.find(instrSect.GetOpcode(pc++));
 		str += buf + info->second.str + "    ";
 		for (const auto& parSize : info->second.parSizeList) {
 			if (parSize == 4) {
@@ -249,15 +249,15 @@ ValueType FunctionProtoValue::GetType() const noexcept {
 }
 
 std::unique_ptr<Value> FunctionProtoValue::Copy() const {
-	return std::make_unique<FunctionProtoValue>(bodyValue);
+	return std::make_unique<FunctionProtoValue>(bodyVal);
 }
 
-FunctionProtoValue::FunctionProtoValue(FunctionBodyValue* t_value) : bodyValue(t_value) {
+FunctionProtoValue::FunctionProtoValue(FunctionBodyValue* t_val) : bodyVal(t_val) {
 
 }
 
 
-FunctionProtoValue::FunctionProtoValue(FunctionBridgeValue* t_value) : bridgeValue(t_value) {
+FunctionProtoValue::FunctionProtoValue(FunctionBridgeValue* t_val) : bridgeVal(t_val) {
 
 }
 
