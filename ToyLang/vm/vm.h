@@ -196,42 +196,42 @@ public:
 			case OpcodeType::kNe: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = !(* a == *b);
+				bool res = !(* b == *a);
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kEq: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = *a == *b;
+				bool res = *b == *a;
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kLt: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = *a < *b;
+				bool res = *b < *a;
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kLe: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = *a <= *b;
+				bool res = *b <= *a;
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kGt: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = !(*a <= *b);
+				bool res = !(*b <= *a);
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}
 			case OpcodeType::kGe: {
 				auto a = m_stackSect.Pop();
 				auto& b = m_stackSect.Get(-1);
-				bool res = !(*a < *b);
+				bool res = !(*b < *a);
 				b = std::move(std::make_unique<BoolValue>(res));
 				break;
 			}

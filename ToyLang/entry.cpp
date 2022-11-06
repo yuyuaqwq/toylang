@@ -76,12 +76,13 @@ int main() {
             for (int i = 0; i < parCount; i++) {
                 auto val = stack->Pop();
                 if (val->GetType() == vm::ValueType::kString) {
-                    printf("%s\n", val->GetString()->value.c_str());
+                    printf("%s", val->GetString()->value.c_str());
                 }
                 else if (val->GetType() == vm::ValueType::kNumber) {
-                    printf("%lld\n", val->GetNumber()->value);
+                    printf("%lld", val->GetNumber()->value);
                 }
             }
+            printf("\n");
             return std::make_unique<NullValue>();
         }
     );

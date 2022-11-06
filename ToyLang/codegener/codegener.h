@@ -35,7 +35,7 @@ public:
 
 class CodeGener {
 public:
-	CodeGener(vm::VM* t_vm) : m_vm{ t_vm } {
+	CodeGener(vm::VM* t_vm) : m_vm{ t_vm }, m_curLoopRepairEndPcList{ nullptr } {
 		m_curFunc = &m_vm->m_mainFunc;
 		m_scope.push_back(Scope{ m_curFunc });
 	}
@@ -153,6 +153,10 @@ public:
 			GenerateFuncDefStat(static_cast<ast::FuncDefStat*>(stat));
 			break;
 		}
+		case ast::StatType::kReturn: {
+			GenerateReturnStat(static_cast<ast::ReturnStat*>(stat));
+			break;
+		}
 		case ast::StatType::kAssign: {
 			GenerateAssignStat(static_cast<ast::AssignStat*>(stat));
 			break;
@@ -161,12 +165,23 @@ public:
 			GenerateNewVarStat(static_cast<ast::NewVarStat*>(stat));
 			break;
 		}
-		case ast::StatType::kIf:
+		case ast::StatType::kIf: {
 			GenerateIfStat(static_cast<ast::IfStat*>(stat));
 			break;
-		case ast::StatType::kReturn:
-			GenerateReturnStat(static_cast<ast::ReturnStat*>(stat));
+		}
+		case ast::StatType::kWhile: {
+			GenerateWhileStat(static_cast<ast::WhileStat*>(stat));
 			break;
+		}
+		case ast::StatType::kContinue: {
+			GenerateContinueStat(static_cast<ast::ContinueStat*>(stat));
+			break;
+		}
+		case ast::StatType::kBreak: {
+			GenerateBreakStat(static_cast<ast::BreakStat*>(stat));
+			break;
+		}
+		
 		default:
 			throw CodeGenerException("Unknown statement type");
 		}
@@ -222,7 +237,7 @@ public:
 		m_curFunc->instrSect.EmitRet();
 	}
 
-	// 局部变量在此无法提前得知总共需要多少，因此不能分配到栈上
+	// 为了简单起见，不提前计算/最后修复局部变量的总数，因此不能分配到栈上
 	// 解决方案：
 		// 另外提供变量表容器
 
@@ -254,7 +269,7 @@ public:
 		GenerateExp(stat->exp.get());		// 表达式结果压栈
 
 		
-		uint32_t ifpc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
+		uint32_t ifPc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
 		m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳转的指令
 
 		GenerateBlock(stat->block.get());
@@ -319,16 +334,16 @@ public:
 	// end:
 		// ....
 
-		std::vector<uint32_t> endPcList;
+		std::vector<uint32_t> repairEndPcList;
 		for (auto& elifStat : stat->elifStatList) {
-			endPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
+			repairEndPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
 			m_curFunc->instrSect.EmitJmp(0);		// 提前写入上一分支退出if分支结构的jmp跳转
 
 			// 修复条件为false时，跳转到if/elif块之后的地址
-			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifPc) = m_curFunc->instrSect.GetPc();
 
 			GenerateExp(elifStat->exp.get());		// 表达式结果压栈
-			ifpc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
+			ifPc = m_curFunc->instrSect.GetPc() + 1;		// 留给下一个elif/else修复
 			m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳转的指令
 
 			GenerateBlock(elifStat->block.get());
@@ -337,26 +352,74 @@ public:
 		
 
 		if (stat->elseStat.get()) {
-			endPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
+			repairEndPcList.push_back(m_curFunc->instrSect.GetPc() + 1);
 			m_curFunc->instrSect.EmitJmp(0);		// 提前写入上一分支退出if分支结构的jmp跳转
 
 			// 修复条件为false时，跳转到if/elif块之后的地址
-			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifPc) = m_curFunc->instrSect.GetPc();
 
 			GenerateBlock(stat->elseStat->block.get());
 		}
 		else {
 			// 修复条件为false时，跳转到if/elif块之后的地址
-			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifpc) = m_curFunc->instrSect.GetPc();
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(ifPc) = m_curFunc->instrSect.GetPc();
 		}
 
 		// 至此if分支结构结束，修复所有退出分支结构的地址
-		for (auto endPc : endPcList) {
-			*(uint32_t*)m_curFunc->instrSect.GetPtr(endPc) = m_curFunc->instrSect.GetPc();
+		for (auto repairEndPc : repairEndPcList) {
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(repairEndPc) = m_curFunc->instrSect.GetPc();
 		}
 		
 
 
+	}
+
+	void GenerateWhileStat(ast::WhileStat* stat) {
+
+		auto saveCurLoopRepairEndPcList = m_curLoopRepairEndPcList;
+		auto saveCurLoopStartPc = m_curLoopStartPc;
+
+		
+
+		std::vector<uint32_t> loopRepairEndPcList;
+		m_curLoopRepairEndPcList = &loopRepairEndPcList;
+
+		uint32_t loopStartPc = m_curFunc->instrSect.GetPc();		// 记录重新循环的pc
+		m_curLoopStartPc = loopStartPc;
+
+
+		GenerateExp(stat->exp.get());		// 表达式结果压栈
+
+		
+		loopRepairEndPcList.push_back(m_curFunc->instrSect.GetPc() + 1);		// 等待修复
+		m_curFunc->instrSect.EmitJcf(0);		// 提前写入条件为false时跳出循环的指令
+
+		GenerateBlock(stat->block.get());
+
+		m_curFunc->instrSect.EmitJmp(loopStartPc);		// 重新回去看是否需要循环
+
+		for (auto repairEndPc : loopRepairEndPcList) {
+			*(uint32_t*)m_curFunc->instrSect.GetPtr(repairEndPc) = m_curFunc->instrSect.GetPc();		// 修复跳出循环的指令的pc
+		}
+
+		m_curLoopStartPc = saveCurLoopStartPc;
+		m_curLoopRepairEndPcList = saveCurLoopRepairEndPcList;
+
+	}
+
+	void GenerateContinueStat(ast::ContinueStat* stat) {
+		if (m_curLoopRepairEndPcList == nullptr) {
+			throw CodeGenerException("Cannot use break in acyclic scope");
+		}
+		m_curFunc->instrSect.EmitJmp(m_curLoopStartPc);		// 跳回当前循环的起始pc
+	}
+
+	void GenerateBreakStat(ast::BreakStat* stat) {
+		if (m_curLoopRepairEndPcList == nullptr) {
+			throw CodeGenerException("Cannot use break in acyclic scope");
+		}
+		m_curLoopRepairEndPcList->push_back(m_curFunc->instrSect.GetPc() + 1);
+		m_curFunc->instrSect.EmitJmp(0);		// 无法提前得知结束pc，保存待修复pc，等待修复
 	}
 
 
@@ -485,6 +548,9 @@ private:
 	vm::ValueSection m_constSect;		// 全局常量区
 
 	std::vector<Scope> m_scope;
+
+	uint32_t m_curLoopStartPc;
+	std::vector<uint32_t>* m_curLoopRepairEndPcList;
 };
 
 } // namespace codegener
