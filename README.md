@@ -33,7 +33,7 @@ boolExp = 'false' | 'true'
 stringExp = string
 numberExp = number
 funcCallExp = ident '(' expList ')'
-expList = { exp {',' exp} }
+expList = { exp [',' exp] }
 ```
 
 
