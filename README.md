@@ -3,7 +3,7 @@
 用于学习编译原理编写的ToyLang练习
 
 
-
+## EBNF
 ```EBNF
 src = {stat}
 stat = ifStat | forStat | whileStat | continueStat | breakStat | returnStat | newVarStat | assignStat | [exp] ';'
@@ -37,7 +37,7 @@ expList = { exp [',' exp] }
 ```
 
 
-
+## toyir
 ``` toyir
 变长指令集，v表示变量，k表示常量
 opcode占1字节，使用低7位，高1位保留
