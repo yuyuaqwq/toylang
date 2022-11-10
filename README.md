@@ -1,6 +1,6 @@
 # ToyLang
 
-学习编译原理编写的ToyLang练习
+用于学习编译原理所编写的ToyLang练习
 
 
 ## EBNF
