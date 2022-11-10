@@ -1,6 +1,6 @@
 # ToyLang
 
-用于学习编译原理开发的ToyLang
+用于学习编译原理编写的ToyLang练习
 
 
 
@@ -32,7 +32,8 @@ nullExp = 'null'
 boolExp = 'false' | 'true'
 stringExp = string
 numberExp = number
-funcCallExp = ident '(' parList ')'
+funcCallExp = ident '(' expList ')'
+expList = { exp {',' exp} }
 ```
 
 
