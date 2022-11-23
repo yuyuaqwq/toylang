@@ -31,6 +31,12 @@
     <Filter Include="源文件\parser">
       <UniqueIdentifier>{813638e2-31b8-434f-8532-77c3c3ad5911}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\interpreter">
+      <UniqueIdentifier>{c943519e-26b5-44ff-a6a3-429c2631507f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\interpreter">
+      <UniqueIdentifier>{c0bfbf08-737e-4591-b65d-d8c77746499d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="entry.cpp">
@@ -48,6 +54,9 @@
     <ClCompile Include="parser\parser.cpp">
       <Filter>源文件\parser</Filter>
     </ClCompile>
+    <ClCompile Include="interpreter\interpreter.cpp">
+      <Filter>源文件\interpreter</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexer\token.h">
@@ -61,6 +70,9 @@
     </ClInclude>
     <ClInclude Include="parser\parser.h">
       <Filter>头文件\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="interpreter\interpreter.h">
+      <Filter>头文件\interpreter</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

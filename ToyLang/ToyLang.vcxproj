@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -129,6 +129,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ast\exp.cpp" />
+    <ClCompile Include="interpreter\interpreter.cpp" />
     <ClCompile Include="lexer\lexer.cpp" />
     <ClCompile Include="lexer\token.cpp" />
     <ClCompile Include="entry.cpp" />
@@ -136,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ast\exp.h" />
+    <ClInclude Include="interpreter\interpreter.h" />
     <ClInclude Include="lexer\lexer.h" />
     <ClInclude Include="lexer\token.h" />
     <ClInclude Include="parser\parser.h" />
