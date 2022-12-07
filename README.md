@@ -1,11 +1,14 @@
-# ToyLang
+# 说明
 
 用于学习编译原理所开发的ToyLang编译器/解释器。
 
 *等待完善代码*
 
+# 文章
+一步步教你开发ToyLang：
+- https://yuyuaqwq.github.io/posts/c4d3.html
 
-## EBNF
+# EBNF
 ```EBNF
 src = {stat}
 stat = ifStat | forStat | whileStat | continueStat | breakStat | returnStat | newVarStat | assignStat | [exp] ';'
@@ -39,7 +42,7 @@ expList = { exp [',' exp] }
 ```
 
 
-## IR
+# IR
 ``` toyir
 变长指令集，v表示变量，k表示常量
 opcode占1字节，使用低7位，高1位保留
