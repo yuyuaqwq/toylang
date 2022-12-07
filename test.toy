@@ -1,0 +1,84 @@
+a := 123;
+b := 233;
+a = a + b + 4444;
+
+t := tick();
+i := 0;
+while i < 1000000 {
+    i = i + 1;
+}
+println("i:", i, "    ", "tick:", tick() - t, "ms");
+
+
+i = 0;
+while i < 100 {
+    i = i + 1;
+    if i == 50 {
+        println("i:", 666);
+    }
+    if i > 80 {
+        j := 0;
+        while j < 10 {
+            println("iii:", i);
+            j = j + 1;
+            if j > 5 {
+                break;
+            }
+        }
+        continue;
+    }
+    elif i >= 90 {
+        break;
+    }
+    println("i:", i);
+}
+println("i:", i);
+
+
+if a == 2 {
+    println("a ���� 2");
+}
+else {
+    if a == 3 {
+        println("a ���� 3");
+    }
+    elif a == 9 {
+        println("a ���� 9");
+    }
+    elif a == 4800 {
+        println("a ���� 4800");
+    }
+    else {
+        println("a ������ 3��9��100");
+    }
+
+    println("a ������ 2");
+}
+
+qvqvq := 10000000;
+{
+    // a = 111;
+    q := "333";
+}
+
+func add(a, b) {
+    a = a + b;
+    println("������");
+    println(a + qvqvq);
+
+    func hanhanyufan() {
+        println("�����귲", "������", qvqvq);
+        println(qvqvq);
+        return 999;
+    }
+
+    a = hanhanyufan();
+
+    println("a�Ƕ����أ�", a);
+}
+
+println("hello world!");
+
+add(666, a, println);
+
+c := "abc";
