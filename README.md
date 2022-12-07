@@ -5,7 +5,7 @@
 *等待完善代码*
 
 # 文章
-一步步教你开发ToyLang：
+手把手教你开发ToyLang：
 - https://yuyuaqwq.github.io/posts/c4d3.html
 
 # EBNF
