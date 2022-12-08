@@ -8,7 +8,7 @@
 #include "lexer/token.h"
 #include "ast/exp.h"
 
-namespace ast {
+namespace toylang {
 
 enum class StatType {
 	kExp,

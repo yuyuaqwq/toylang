@@ -15,10 +15,10 @@
 #include "ast/stat.h"
 #include "ast/exp.h"
 
-namespace codegener {
+namespace toylang {
 
 struct Scope {
-	value::FunctionBodyValue* m_func;		// 作用域所属函数
+	FunctionBodyValue* m_func;		// 作用域所属函数
 	uint32_t varCount;		// 当前函数在当前作用域中的有效变量计数
 	std::map<std::string, uint32_t> m_varTable;		// 变量表，key为变量索引
 };
@@ -34,57 +34,37 @@ public:
 
 class CodeGener {
 public:
-	CodeGener(value::ValueSection* t_constSect);
+	CodeGener(ValueSection* t_constSect);
 
-	void EntryScope(value::FunctionBodyValue* subFunc = nullptr);
-
+public:
+	void EntryScope(FunctionBodyValue* subFunc = nullptr);
 	void ExitScope();
-
-	uint32_t AllocConst(std::unique_ptr<value::Value> value);
-
+	uint32_t AllocConst(std::unique_ptr<Value> value);
 	uint32_t AllocVar(std::string varName);
-;
 	uint32_t GetVar(std::string varName);
+	void RegistryFunctionBridge(std::string funcName, FunctionBridgeCall funcAddr);
 
-
-	void RegistryFunctionBridge(std::string funcName, value::FunctionBridgeCall funcAddr);
-
-
-	void Generate(ast::BlockStat* block, value::ValueSection* constSect);
-
-	void GenerateBlock(ast::BlockStat* block);
-
-	void GenerateStat(ast::Stat* stat);
-
-	void GenerateFuncDefStat(ast::FuncDefStat* stat);
-
-	void GenerateReturnStat(ast::ReturnStat* stat);
-
-	void GenerateNewVarStat(ast::NewVarStat* stat);
-
-	void GenerateAssignStat(ast::AssignStat* stat);
-
-	void GenerateIfStat(ast::IfStat* stat);
-
-	void GenerateWhileStat(ast::WhileStat* stat);
-
-	void GenerateContinueStat(ast::ContinueStat* stat);
-
-	void GenerateBreakStat(ast::BreakStat* stat);
-
-
-	void GenerateExp(ast::Exp* exp);
-
-
+	void Generate(BlockStat* block, ValueSection* constSect);
+	void GenerateBlock(BlockStat* block);
+	void GenerateStat(Stat* stat);
+	void GenerateFuncDefStat(FuncDefStat* stat);
+	void GenerateReturnStat(ReturnStat* stat);
+	void GenerateNewVarStat(NewVarStat* stat);
+	void GenerateAssignStat(AssignStat* stat);
+	void GenerateIfStat(IfStat* stat);
+	void GenerateWhileStat(WhileStat* stat);
+	void GenerateContinueStat(ContinueStat* stat);
+	void GenerateBreakStat(BreakStat* stat);
+	void GenerateExp(Exp* exp);
 
 private:
 
 	// 函数相关
-	value::FunctionBodyValue* m_curFunc;		// 当前生成函数
+	FunctionBodyValue* m_curFunc;		// 当前生成函数
 
 	// 常量相关
-	std::map<value::Value*, uint32_t> m_constMap;		// 暂时有问题，指针就没办法找重载<了
-	value::ValueSection* m_constSect;		// 全局常量区
+	std::map<Value*, uint32_t> m_constMap;		// 暂时有问题，指针就没办法找重载<了
+	ValueSection* m_constSect;		// 全局常量区
 
 	// 作用域相关
 	std::vector<Scope> m_scope;

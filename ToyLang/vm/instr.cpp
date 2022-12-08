@@ -1,6 +1,6 @@
 #include "instr.h"
 
-namespace vm {
+namespace toylang {
 
 std::map<OpcodeType, InstrInfo> g_instrSymbol {
 	{OpcodeType::kStop, {"stop", {}}},
@@ -32,7 +32,7 @@ uint8_t* InstrSection::GetPtr(uint32_t pc) {
 	return container.data() + pc;
 }
 
-uint32_t InstrSection::GetPc() {
+uint32_t InstrSection::GetPc() const noexcept {
 	return container.size();
 }
 
@@ -149,7 +149,6 @@ void InstrSection::EmitJmp(uint32_t i) {
 	EmitOpcode(OpcodeType::kJmp);
 	EmitU32(i);
 }
-
 
 
 

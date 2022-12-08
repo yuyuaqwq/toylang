@@ -5,7 +5,7 @@
 #include <map>
 
 
-namespace lexer {
+namespace toylang {
 
 // token类型常量
 enum class TokenType {
@@ -45,7 +45,6 @@ enum class TokenType {
 	kOpGt,     // >
 	kOpGe,     // >=
 
-
 	kKwFunc,  // func
 	kKwIf,    // if
 	kKwElif,  // elif
@@ -55,8 +54,6 @@ enum class TokenType {
 	kKwContinue,  // continue
 	kKwBreak,   // break
 	kKwReturn,  // return
-
-
 };
 
 extern std::map<std::string, TokenType> g_keywords;

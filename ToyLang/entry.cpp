@@ -16,13 +16,7 @@
 
 int main() {
 
-  
-
-    using namespace lexer;
-    using namespace parser;
-    using namespace codegener;
-    using namespace vm;
-    using namespace value;
+    using namespace toylang;
 
     auto t = GetTickCount64();
     int i = 0;

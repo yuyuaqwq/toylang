@@ -1,7 +1,7 @@
 #include "codegener.h"
 
 
-namespace codegener {
+namespace toylang {
 
 CodeGenerException::CodeGenerException(const char* t_msg) : std::exception(t_msg) {
 
@@ -10,15 +10,15 @@ CodeGenerException::CodeGenerException(const char* t_msg) : std::exception(t_msg
 
 
 
-CodeGener::CodeGener(value::ValueSection* t_constSect) : m_constSect(t_constSect), m_curLoopRepairEndPcList{ nullptr } {
+CodeGener::CodeGener(ValueSection* t_constSect) : m_constSect(t_constSect), m_curLoopRepairEndPcList{ nullptr } {
 	t_constSect->Clear();
-	t_constSect->Push(std::make_unique<value::FunctionBodyValue>(0));
+	t_constSect->Push(std::make_unique<FunctionBodyValue>(0));
 	m_curFunc = t_constSect->Get(0)->GetFunctionBody();
 
 	m_scope.push_back(Scope{ m_curFunc });
 }
 
-void CodeGener::EntryScope(value::FunctionBodyValue* subFunc) {
+void CodeGener::EntryScope(FunctionBodyValue* subFunc) {
 	if (!subFunc) {
 		// 进入的作用域不是新函数
 		m_scope.push_back(Scope{ m_curFunc, m_scope[m_scope.size() - 1].varCount });
@@ -32,7 +32,7 @@ void CodeGener::ExitScope() {
 	m_scope.pop_back();
 }
 
-uint32_t CodeGener::AllocConst(std::unique_ptr<value::Value> value) {
+uint32_t CodeGener::AllocConst(std::unique_ptr<Value> value) {
 	uint32_t constIdx;
 	auto it = m_constMap.find(value.get());
 	if (it == m_constMap.end()) {
@@ -68,7 +68,7 @@ uint32_t CodeGener::GetVar(std::string varName) {
 			}
 			else {
 				// 引用外部函数的变量，需要捕获，为当前函数加载upvalue变量
-				auto constIdx = AllocConst(std::make_unique<value::UpValue>(it->second, m_scope[i].m_func));
+				auto constIdx = AllocConst(std::make_unique<UpValue>(it->second, m_scope[i].m_func));
 				m_curFunc->instrSect.EmitPushK(constIdx);
 				varIdx = AllocVar(varName);
 				m_curFunc->instrSect.EmitPopV(varIdx);
@@ -80,9 +80,9 @@ uint32_t CodeGener::GetVar(std::string varName) {
 }
 
 
-void CodeGener::RegistryFunctionBridge(std::string funcName, value::FunctionBridgeCall funcAddr) {
+void CodeGener::RegistryFunctionBridge(std::string funcName, FunctionBridgeCall funcAddr) {
 	auto varIdx = AllocVar(funcName);
-	auto constIdx = AllocConst(std::make_unique<value::FunctionBridgeValue>(funcAddr));
+	auto constIdx = AllocConst(std::make_unique<FunctionBridgeValue>(funcAddr));
 
 
 	// 生成将函数放到变量表中的代码
@@ -92,7 +92,7 @@ void CodeGener::RegistryFunctionBridge(std::string funcName, value::FunctionBrid
 }
 
 
-void CodeGener::Generate(ast::BlockStat* block, value::ValueSection* constSect) {
+void CodeGener::Generate(BlockStat* block, ValueSection* constSect) {
 
 	for (auto& stat : block->statList) {
 		GenerateStat(stat.get());
@@ -101,7 +101,7 @@ void CodeGener::Generate(ast::BlockStat* block, value::ValueSection* constSect) 
 
 }
 
-void CodeGener::GenerateBlock(ast::BlockStat* block) {
+void CodeGener::GenerateBlock(BlockStat* block) {
 	EntryScope();
 	for (auto& stat : block->statList) {
 		GenerateStat(stat.get());
@@ -109,15 +109,15 @@ void CodeGener::GenerateBlock(ast::BlockStat* block) {
 	ExitScope();
 }
 
-void CodeGener::GenerateStat(ast::Stat* stat) {
+void CodeGener::GenerateStat(Stat* stat) {
 	switch (stat->GetType())
 	{
-	case ast::StatType::kBlock: {
-		GenerateBlock(static_cast<ast::BlockStat*>(stat));
+	case StatType::kBlock: {
+		GenerateBlock(static_cast<BlockStat*>(stat));
 		break;
 	}
-	case ast::StatType::kExp: {
-		auto expStat = static_cast<ast::ExpStat*>(stat)->exp.get();
+	case StatType::kExp: {
+		auto expStat = static_cast<ExpStat*>(stat)->exp.get();
 
 		// 抛弃纯表达式语句的最终结果
 		if (expStat) {
@@ -127,36 +127,36 @@ void CodeGener::GenerateStat(ast::Stat* stat) {
 
 		break;
 	}
-	case ast::StatType::kFuncDef: {
-		GenerateFuncDefStat(static_cast<ast::FuncDefStat*>(stat));
+	case StatType::kFuncDef: {
+		GenerateFuncDefStat(static_cast<FuncDefStat*>(stat));
 		break;
 	}
-	case ast::StatType::kReturn: {
-		GenerateReturnStat(static_cast<ast::ReturnStat*>(stat));
+	case StatType::kReturn: {
+		GenerateReturnStat(static_cast<ReturnStat*>(stat));
 		break;
 	}
-	case ast::StatType::kAssign: {
-		GenerateAssignStat(static_cast<ast::AssignStat*>(stat));
+	case StatType::kAssign: {
+		GenerateAssignStat(static_cast<AssignStat*>(stat));
 		break;
 	}
-	case ast::StatType::kNewVar: {
-		GenerateNewVarStat(static_cast<ast::NewVarStat*>(stat));
+	case StatType::kNewVar: {
+		GenerateNewVarStat(static_cast<NewVarStat*>(stat));
 		break;
 	}
-	case ast::StatType::kIf: {
-		GenerateIfStat(static_cast<ast::IfStat*>(stat));
+	case StatType::kIf: {
+		GenerateIfStat(static_cast<IfStat*>(stat));
 		break;
 	}
-	case ast::StatType::kWhile: {
-		GenerateWhileStat(static_cast<ast::WhileStat*>(stat));
+	case StatType::kWhile: {
+		GenerateWhileStat(static_cast<WhileStat*>(stat));
 		break;
 	}
-	case ast::StatType::kContinue: {
-		GenerateContinueStat(static_cast<ast::ContinueStat*>(stat));
+	case StatType::kContinue: {
+		GenerateContinueStat(static_cast<ContinueStat*>(stat));
 		break;
 	}
-	case ast::StatType::kBreak: {
-		GenerateBreakStat(static_cast<ast::BreakStat*>(stat));
+	case StatType::kBreak: {
+		GenerateBreakStat(static_cast<BreakStat*>(stat));
 		break;
 	}
 
@@ -165,9 +165,9 @@ void CodeGener::GenerateStat(ast::Stat* stat) {
 	}
 }
 
-void CodeGener::GenerateFuncDefStat(ast::FuncDefStat* stat) {
+void CodeGener::GenerateFuncDefStat(FuncDefStat* stat) {
 	auto varIdx = AllocVar(stat->funcName);
-	auto constIdx = AllocConst(std::make_unique<value::FunctionBodyValue>(stat->parList.size()));
+	auto constIdx = AllocConst(std::make_unique<FunctionBodyValue>(stat->parList.size()));
 
 	// 生成将函数放到变量表中的代码
 	// 交给虚拟机执行时去加载，虚拟机发现加载的常量是函数体，就会将函数原型赋给局部变量
@@ -192,9 +192,9 @@ void CodeGener::GenerateFuncDefStat(ast::FuncDefStat* stat) {
 		auto& stat = block->statList[i];
 		GenerateStat(stat.get());
 		if (i == block->statList.size() - 1) {
-			if (stat->GetType() != ast::StatType::kReturn) {
+			if (stat->GetType() != StatType::kReturn) {
 				// 补全末尾的return
-				m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NullValue>()));
+				m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<NullValue>()));
 				m_curFunc->instrSect.EmitRet();
 			}
 		}
@@ -205,12 +205,12 @@ void CodeGener::GenerateFuncDefStat(ast::FuncDefStat* stat) {
 	m_curFunc = savefunc;
 }
 
-void CodeGener::GenerateReturnStat(ast::ReturnStat* stat) {
+void CodeGener::GenerateReturnStat(ReturnStat* stat) {
 	if (stat->exp.get()) {
 		GenerateExp(stat->exp.get());
 	}
 	else {
-		m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NullValue>()));
+		m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<NullValue>()));
 	}
 	m_curFunc->instrSect.EmitRet();
 }
@@ -228,13 +228,13 @@ void CodeGener::GenerateReturnStat(ast::ReturnStat* stat) {
 	// upvalue存储了外部函数的Body地址，以及对应的变量索引
 
 
-void CodeGener::GenerateNewVarStat(ast::NewVarStat* stat) {
+void CodeGener::GenerateNewVarStat(NewVarStat* stat) {
 	auto varIdx = AllocVar(stat->varName);
 	GenerateExp(stat->exp.get());		// 生成表达式计算指令，最终结果会到栈顶
 	m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到局部变量中
 }
 
-void CodeGener::GenerateAssignStat(ast::AssignStat* stat) {
+void CodeGener::GenerateAssignStat(AssignStat* stat) {
 	auto varIdx = GetVar(stat->varName);
 	if (varIdx == -1) {
 		throw CodeGenerException("var not defined");
@@ -243,7 +243,7 @@ void CodeGener::GenerateAssignStat(ast::AssignStat* stat) {
 	m_curFunc->instrSect.EmitPopV(varIdx);	// 弹出到变量中
 }
 
-void CodeGener::GenerateIfStat(ast::IfStat* stat) {
+void CodeGener::GenerateIfStat(IfStat* stat) {
 	GenerateExp(stat->exp.get());		// 表达式结果压栈
 
 
@@ -352,7 +352,7 @@ void CodeGener::GenerateIfStat(ast::IfStat* stat) {
 
 }
 
-void CodeGener::GenerateWhileStat(ast::WhileStat* stat) {
+void CodeGener::GenerateWhileStat(WhileStat* stat) {
 
 	auto saveCurLoopRepairEndPcList = m_curLoopRepairEndPcList;
 	auto saveCurLoopStartPc = m_curLoopStartPc;
@@ -385,14 +385,14 @@ void CodeGener::GenerateWhileStat(ast::WhileStat* stat) {
 
 }
 
-void CodeGener::GenerateContinueStat(ast::ContinueStat* stat) {
+void CodeGener::GenerateContinueStat(ContinueStat* stat) {
 	if (m_curLoopRepairEndPcList == nullptr) {
 		throw CodeGenerException("Cannot use break in acyclic scope");
 	}
 	m_curFunc->instrSect.EmitJmp(m_curLoopStartPc);		// 跳回当前循环的起始pc
 }
 
-void CodeGener::GenerateBreakStat(ast::BreakStat* stat) {
+void CodeGener::GenerateBreakStat(BreakStat* stat) {
 	if (m_curLoopRepairEndPcList == nullptr) {
 		throw CodeGenerException("Cannot use break in acyclic scope");
 	}
@@ -401,35 +401,35 @@ void CodeGener::GenerateBreakStat(ast::BreakStat* stat) {
 }
 
 
-void CodeGener::GenerateExp(ast::Exp* exp) {
+void CodeGener::GenerateExp(Exp* exp) {
 	switch (exp->GetType())
 	{
-	case ast::ExpType::kNull: {
-		auto constIdx = AllocConst(std::make_unique<value::NullValue>());
+	case ExpType::kNull: {
+		auto constIdx = AllocConst(std::make_unique<NullValue>());
 		m_curFunc->instrSect.EmitPushK(constIdx);
 		break;
 	}
-	case ast::ExpType::kBool: {
-		auto boolexp = static_cast<ast::BoolExp*>(exp);
-		auto constIdx = AllocConst(std::make_unique<value::BoolValue>(boolexp->value));
+	case ExpType::kBool: {
+		auto boolexp = static_cast<BoolExp*>(exp);
+		auto constIdx = AllocConst(std::make_unique<BoolValue>(boolexp->value));
 		m_curFunc->instrSect.EmitPushK(constIdx);
 		break;
 	}
-	case ast::ExpType::kNumber: {
-		auto numexp = static_cast<ast::NumberExp*>(exp);
-		auto constIdx = AllocConst(std::make_unique<value::NumberValue>(numexp->value));
+	case ExpType::kNumber: {
+		auto numexp = static_cast<NumberExp*>(exp);
+		auto constIdx = AllocConst(std::make_unique<NumberValue>(numexp->value));
 		m_curFunc->instrSect.EmitPushK(constIdx);
 		break;
 	}
-	case ast::ExpType::kString: {
-		auto strexp = static_cast<ast::StringExp*>(exp);
-		auto constIdx = AllocConst(std::make_unique<value::StringValue>(strexp->value));
+	case ExpType::kString: {
+		auto strexp = static_cast<StringExp*>(exp);
+		auto constIdx = AllocConst(std::make_unique<StringValue>(strexp->value));
 		m_curFunc->instrSect.EmitPushK(constIdx);
 		break;
 	}
-	case ast::ExpType::kName: {
+	case ExpType::kName: {
 		// 是取变量值的话，查找到对应的变量编号，将其入栈
-		auto nameExp = static_cast<ast::NameExp*>(exp);
+		auto nameExp = static_cast<NameExp*>(exp);
 
 		auto varIdx = GetVar(nameExp->name);
 		if (varIdx == -1) {
@@ -441,8 +441,8 @@ void CodeGener::GenerateExp(ast::Exp* exp) {
 
 		break;
 	}
-	case ast::ExpType::kBinaOp: {
-		auto binaOpExp = static_cast<ast::BinaOpExp*>(exp);
+	case ExpType::kBinaOp: {
+		auto binaOpExp = static_cast<BinaOpExp*>(exp);
 
 		// 左右表达式的值入栈
 		GenerateExp(binaOpExp->leftExp.get());
@@ -450,34 +450,34 @@ void CodeGener::GenerateExp(ast::Exp* exp) {
 
 		// 生成运算指令
 		switch (binaOpExp->oper) {
-		case lexer::TokenType::kOpAdd:
+		case TokenType::kOpAdd:
 			m_curFunc->instrSect.EmitAdd();
 			break;
-		case lexer::TokenType::kOpSub:
+		case TokenType::kOpSub:
 			m_curFunc->instrSect.EmitSub();
 			break;
-		case lexer::TokenType::kOpMul:
+		case TokenType::kOpMul:
 			m_curFunc->instrSect.EmitMul();
 			break;
-		case lexer::TokenType::kOpDiv:
+		case TokenType::kOpDiv:
 			m_curFunc->instrSect.EmitDiv();
 			break;
-		case lexer::TokenType::kOpNe:
+		case TokenType::kOpNe:
 			m_curFunc->instrSect.EmitNe();
 			break;
-		case lexer::TokenType::kOpEq:
+		case TokenType::kOpEq:
 			m_curFunc->instrSect.EmitEq();
 			break;
-		case lexer::TokenType::kOpLt:
+		case TokenType::kOpLt:
 			m_curFunc->instrSect.EmitLt();
 			break;
-		case lexer::TokenType::kOpLe:
+		case TokenType::kOpLe:
 			m_curFunc->instrSect.EmitLe();
 			break;
-		case lexer::TokenType::kOpGt:
+		case TokenType::kOpGt:
 			m_curFunc->instrSect.EmitGt();
 			break;
-		case lexer::TokenType::kOpGe:
+		case TokenType::kOpGe:
 			m_curFunc->instrSect.EmitGe();
 			break;
 		default:
@@ -485,8 +485,8 @@ void CodeGener::GenerateExp(ast::Exp* exp) {
 		}
 		break;
 	}
-	case ast::ExpType::kFuncCall: {
-		auto funcCallExp = static_cast<ast::FuncCallExp*>(exp);
+	case ExpType::kFuncCall: {
+		auto funcCallExp = static_cast<FuncCallExp*>(exp);
 
 		auto varIdx = GetVar(funcCallExp->name);
 		if (varIdx == -1) {
@@ -502,7 +502,7 @@ void CodeGener::GenerateExp(ast::Exp* exp) {
 			GenerateExp(funcCallExp->parList[i].get());
 		}
 
-		m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<value::NumberValue>(funcCallExp->parList.size())));
+		m_curFunc->instrSect.EmitPushK(AllocConst(std::make_unique<NumberValue>(funcCallExp->parList.size())));
 
 		// 函数原型存放在变量表中
 		m_curFunc->instrSect.EmitCall(varIdx);

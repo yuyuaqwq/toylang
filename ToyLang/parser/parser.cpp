@@ -10,16 +10,13 @@ parenexp = '(' addexp ')' | numexp
 numexp = number
 */
 
-namespace parser {
+namespace toylang {
 
 using std::unique_ptr;
 using std::vector;
 using std::string;
 using std::move;
 using std::make_unique;
-using lexer::TokenType;
-
-using namespace ast;
 
 
 ParserException::ParserException(const char* t_msg) : std::exception(t_msg) {
@@ -27,7 +24,7 @@ ParserException::ParserException(const char* t_msg) : std::exception(t_msg) {
 }
 
 
-Parser::Parser(lexer::Lexer* t_lexer) : m_lexer(t_lexer) {
+Parser::Parser(Lexer* t_lexer) : m_lexer(t_lexer) {
 
 }
 
@@ -107,11 +104,11 @@ unique_ptr<Stat> Parser::ParseStat() {
 unique_ptr<ExpStat> Parser::ParseExpStat() {
 	if (m_lexer->LookAHead().type == TokenType::kSepSemi) {
 		m_lexer->NextToken();
-		return std::make_unique<ast::ExpStat>(nullptr);
+		return std::make_unique<ExpStat>(nullptr);
 	}
 	auto exp = ParseExp();
 	m_lexer->MatchToken(TokenType::kSepSemi);
-	return std::make_unique<ast::ExpStat>(move(exp));
+	return std::make_unique<ExpStat>(move(exp));
 }
 
 unique_ptr<FuncDefStat> Parser::ParseFuncDefStat() {
@@ -119,7 +116,7 @@ unique_ptr<FuncDefStat> Parser::ParseFuncDefStat() {
 	auto funcName = m_lexer->MatchToken(TokenType::kIdent).str;
 	auto parList = ParseParNameList();
 	auto block = ParseBlockStat();
-	return std::make_unique<ast::FuncDefStat>(funcName, parList, std::move(block));
+	return std::make_unique<FuncDefStat>(funcName, parList, std::move(block));
 }
 
 vector<string> Parser::ParseParNameList() {

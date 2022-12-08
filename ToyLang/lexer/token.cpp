@@ -1,6 +1,6 @@
 #include "token.h"
 
-namespace lexer {
+namespace toylang {
 
 bool Token::Is(TokenType t_type) const noexcept {
 	return t_type == type;

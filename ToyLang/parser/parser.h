@@ -7,7 +7,7 @@
 #include "ast/stat.h"
 #include "ast/exp.h"
 
-namespace parser {
+namespace toylang {
 
 // 语法分析时发生的异常
 class ParserException : public std::exception {
@@ -17,38 +17,38 @@ public:
 
 class Parser {
 public:
-	Parser(lexer::Lexer* t_lexer);
+	Parser(Lexer* t_lexer);
 
 public:
-	std::unique_ptr<ast::BlockStat> ParseSource();
-	std::unique_ptr<ast::BlockStat> ParseBlockStat();
-	std::unique_ptr<ast::Stat> ParseStat();
+	std::unique_ptr<BlockStat> ParseSource();
+	std::unique_ptr<BlockStat> ParseBlockStat();
+	std::unique_ptr<Stat> ParseStat();
 
-	std::unique_ptr<ast::ExpStat> ParseExpStat();
+	std::unique_ptr<ExpStat> ParseExpStat();
 
-	std::unique_ptr<ast::FuncDefStat> ParseFuncDefStat();
+	std::unique_ptr<FuncDefStat> ParseFuncDefStat();
 	std::vector<std::string> ParseParNameList();
-	std::unique_ptr<ast::IfStat> ParseIfStat();
-	std::unique_ptr<ast::ElifStat> ParseElifStat();
-	std::unique_ptr<ast::ElseStat> ParseElseStat();
+	std::unique_ptr<IfStat> ParseIfStat();
+	std::unique_ptr<ElifStat> ParseElifStat();
+	std::unique_ptr<ElseStat> ParseElseStat();
 
-	std::unique_ptr<ast::ForStat> ParseForStat();
-	std::unique_ptr<ast::WhileStat> ParseWhileStat();
-	std::unique_ptr<ast::ContinueStat> ParseContinueStat();
-	std::unique_ptr<ast::BreakStat> ParseBreakStat();
-	std::unique_ptr<ast::ReturnStat> ParseReturnStat();
+	std::unique_ptr<ForStat> ParseForStat();
+	std::unique_ptr<WhileStat> ParseWhileStat();
+	std::unique_ptr<ContinueStat> ParseContinueStat();
+	std::unique_ptr<BreakStat> ParseBreakStat();
+	std::unique_ptr<ReturnStat> ParseReturnStat();
 
-	std::unique_ptr<ast::NewVarStat> ParseNewVarStat();
-	std::unique_ptr<ast::AssignStat> ParseAssignStat();
+	std::unique_ptr<NewVarStat> ParseNewVarStat();
+	std::unique_ptr<AssignStat> ParseAssignStat();
 
-	std::unique_ptr<ast::Exp> ParseExp();
-	std::unique_ptr<ast::Exp> ParseExp3();
-	std::unique_ptr<ast::Exp> ParseExp2();
-	std::unique_ptr<ast::Exp> ParseExp1();
-	std::unique_ptr<ast::Exp> ParseExp0();
-	std::vector<std::unique_ptr<ast::Exp>> ParseParExpList();
+	std::unique_ptr<Exp> ParseExp();
+	std::unique_ptr<Exp> ParseExp3();
+	std::unique_ptr<Exp> ParseExp2();
+	std::unique_ptr<Exp> ParseExp1();
+	std::unique_ptr<Exp> ParseExp0();
+	std::vector<std::unique_ptr<Exp>> ParseParExpList();
 private:
-	lexer::Lexer* m_lexer;
+	Lexer* m_lexer;
 };
 
 } // namespace parser

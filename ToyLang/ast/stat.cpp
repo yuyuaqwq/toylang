@@ -1,6 +1,6 @@
 #include "stat.h"
 
-namespace ast {
+namespace toylang {
 
 StatType ExpStat::GetType() const noexcept {
 	return StatType::kExp;

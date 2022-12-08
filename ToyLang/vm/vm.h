@@ -17,7 +17,7 @@ namespace codegener{
 class CodeGener;
 }
 
-namespace vm {
+namespace toylang {
 
 class VMException : public std::exception {
 public:
@@ -30,29 +30,24 @@ public:
 	friend class codegener::CodeGener;
 
 public:
-	VM(value::ValueSection* t_constSect);
+	explicit VM(ValueSection* t_constSect);
 
+public:
 	std::string Disassembly();
-
-	value::Value* GetVar(uint32_t idx);
-
-	std::unique_ptr<value::Value> GetVarCopy(uint32_t idx);
-
-	void SetVar(uint32_t idx, std::unique_ptr<value::Value> var);
-
-	void SetVar(uint32_t idx, value::Value* var);
-
-
 	void Run();
 
 private:
-	uint32_t m_pc;
-	value::FunctionBodyValue* m_curFunc;
-	value::ValueSection* m_constSect;
+	Value* GetVar(uint32_t idx);
+	std::unique_ptr<Value> GetVarCopy(uint32_t idx);
+	void SetVar(uint32_t idx, std::unique_ptr<Value> var);
+	void SetVar(uint32_t idx, Value* var);
 
-	value::ValueSection m_stackSect;
+private:
+	uint32_t m_pc;
+	FunctionBodyValue* m_curFunc;
+	ValueSection* m_constSect;
+	ValueSection m_stackSect;
 	// std::vector<std::unique_ptr<Value>> m_stackSect;
-	
 	
 };
 

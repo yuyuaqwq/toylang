@@ -6,7 +6,7 @@
 
 #include "lexer/token.h"
 
-namespace lexer {
+namespace toylang {
 
 // 词法分析时发生的异常
 class LexerException : public std::exception {
@@ -20,16 +20,16 @@ public:
 	Lexer(const char* t_src);
 	~Lexer() noexcept;
 
+public:
+	Token LookAHead();
+	Token NextToken();
+	Token MatchToken(TokenType type);
+
 private:
 	char NextChar() noexcept;
 	void SkipChar(int count) noexcept;
 	bool TestStr(const std::string& str);
 	bool TestChar(char c);
-
-public:
-	Token LookAHead();
-	Token NextToken();
-	Token MatchToken(TokenType type);
 
 private:
 	std::string m_src;

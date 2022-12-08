@@ -1,6 +1,6 @@
 #include "value.h"
 
-namespace value {
+namespace toylang {
 
 bool Value::operator<(const Value& value) const {
 	if (GetType() == value.GetType()) {
@@ -113,33 +113,31 @@ bool Value::operator==(const Value& value) const {
 
 
 
-BoolValue* Value::GetBool() {
+BoolValue* Value::GetBool() noexcept {
 	return static_cast<BoolValue*>(this);
 }
 
-NumberValue* Value::GetNumber() {
+NumberValue* Value::GetNumber() noexcept {
 	return static_cast<NumberValue*>(this);
 }
 
-StringValue* Value::GetString() {
+StringValue* Value::GetString() noexcept {
 	return static_cast<StringValue*>(this);
 }
 
-FunctionProtoValue* Value::GetFunctionProto() {
+FunctionProtoValue* Value::GetFunctionProto() noexcept {
 	return static_cast<FunctionProtoValue*>(this);
 }
 
-FunctionBodyValue* Value::GetFunctionBody() {
+FunctionBodyValue* Value::GetFunctionBody() noexcept {
 	return static_cast<FunctionBodyValue*>(this);
 }
 
-FunctionBridgeValue* Value::GetFunctionBirdge() {
+FunctionBridgeValue* Value::GetFunctionBirdge() noexcept {
 	return static_cast<FunctionBridgeValue*>(this);
 }
 
-
-
-UpValue* Value::GetUp() {
+UpValue* Value::GetUp() noexcept {
 	return static_cast<UpValue*>(this);
 }
 
@@ -165,7 +163,7 @@ std::unique_ptr<Value> BoolValue::Copy() const {
 	return std::make_unique<BoolValue>(val);
 }
 
-BoolValue::BoolValue(bool t_val) : val(t_val) {
+BoolValue::BoolValue(bool t_val) noexcept : val(t_val) {
 
 }
 
@@ -179,7 +177,7 @@ std::unique_ptr<Value> NumberValue::Copy() const {
 	return std::make_unique<NumberValue>(val);
 }
 
-NumberValue::NumberValue(uint64_t t_val) : val(t_val) {
+NumberValue::NumberValue(uint64_t t_val) noexcept : val(t_val) {
 
 }
 
@@ -205,7 +203,7 @@ std::unique_ptr<Value> FunctionBridgeValue::Copy() const {
 	return std::make_unique<FunctionProtoValue>(const_cast<FunctionBridgeValue*>(this));
 }
 
-FunctionBridgeValue::FunctionBridgeValue(FunctionBridgeCall t_funcAddr) : funcAddr(t_funcAddr) {
+FunctionBridgeValue::FunctionBridgeValue(FunctionBridgeCall t_funcAddr) noexcept : funcAddr(t_funcAddr) {
 
 }
 
@@ -219,7 +217,7 @@ std::unique_ptr<Value> FunctionBodyValue::Copy() const {
 	return std::make_unique<FunctionProtoValue>(const_cast<FunctionBodyValue*>(this));
 }
 
-FunctionBodyValue::FunctionBodyValue(uint32_t t_parCount) : parCount(t_parCount) {
+FunctionBodyValue::FunctionBodyValue(uint32_t t_parCount) noexcept : parCount(t_parCount) {
 
 }
 
@@ -228,7 +226,7 @@ std::string FunctionBodyValue::Disassembly() {
 	for (int pc = 0; pc < instrSect.container.size(); ) {
 		char buf[16] = { 0 };
 		sprintf_s(buf, "%04d    ", pc);
-		const auto& info = vm::g_instrSymbol.find(instrSect.GetOpcode(pc++));
+		const auto& info = g_instrSymbol.find(instrSect.GetOpcode(pc++));
 		str += buf + info->second.str + "    ";
 		for (const auto& parSize : info->second.parSizeList) {
 			if (parSize == 4) {
@@ -252,12 +250,12 @@ std::unique_ptr<Value> FunctionProtoValue::Copy() const {
 	return std::make_unique<FunctionProtoValue>(bodyVal);
 }
 
-FunctionProtoValue::FunctionProtoValue(FunctionBodyValue* t_val) : bodyVal(t_val) {
+FunctionProtoValue::FunctionProtoValue(FunctionBodyValue* t_val) noexcept : bodyVal(t_val) {
 
 }
 
 
-FunctionProtoValue::FunctionProtoValue(FunctionBridgeValue* t_val) : bridgeVal(t_val) {
+FunctionProtoValue::FunctionProtoValue(FunctionBridgeValue* t_val) noexcept : bridgeVal(t_val) {
 
 }
 
@@ -272,7 +270,7 @@ std::unique_ptr<Value> UpValue::UpValue::Copy() const {
 	return std::make_unique<UpValue>(index, funcProto);
 }
 
-UpValue::UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto): index(t_index), funcProto(t_funcProto) {
+UpValue::UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto) noexcept : index(t_index), funcProto(t_funcProto) {
 
 }
 

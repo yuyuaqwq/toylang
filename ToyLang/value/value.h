@@ -8,7 +8,7 @@
 
 #include "value/section.h"
 
-namespace value {
+namespace toylang {
 
 enum class ValueType {
 	kNull = 0,
@@ -34,37 +34,25 @@ class UpValue;
 class Value {
 public:
 	virtual ValueType GetType() const noexcept = 0;
-
 	virtual std::unique_ptr<Value> Copy() const = 0;
 
 	bool operator<(const Value& value) const;
-
 	bool operator<=(const Value& value) const;
-
 	bool operator==(const Value& value) const;
 
-
-
-	BoolValue* GetBool();
-
-	NumberValue* GetNumber();
-
-	StringValue* GetString();
-
-	FunctionProtoValue* GetFunctionProto();
-
-	FunctionBodyValue* GetFunctionBody();
-
-	FunctionBridgeValue* GetFunctionBirdge();
-
-	UpValue* GetUp();
+	BoolValue* GetBool() noexcept;
+	NumberValue* GetNumber() noexcept;
+	StringValue* GetString() noexcept;
+	FunctionProtoValue* GetFunctionProto() noexcept;
+	FunctionBodyValue* GetFunctionBody() noexcept;
+	FunctionBridgeValue* GetFunctionBirdge() noexcept;
+	UpValue* GetUp() noexcept;
 
 };
 
 class NullValue :public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
 };
 
@@ -72,10 +60,8 @@ public:
 class BoolValue :public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
-	explicit BoolValue(bool t_value);
+	explicit BoolValue(bool t_value) noexcept;
 
 public:
 	bool val;
@@ -84,10 +70,8 @@ public:
 class NumberValue :public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
-	explicit NumberValue(uint64_t t_value);
+	explicit NumberValue(uint64_t t_value) noexcept;
 
 public:
 	uint64_t val;
@@ -97,9 +81,7 @@ public:
 class StringValue :public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
 	explicit StringValue(const std::string& t_value);
 
 public:
@@ -114,16 +96,13 @@ public:
 class FunctionBodyValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
-	FunctionBodyValue(uint32_t t_parCount);
-
+	explicit FunctionBodyValue(uint32_t t_parCount) noexcept;
 	std::string Disassembly();
 
 public:
 	uint32_t parCount;
-	vm::InstrSection instrSect;
+	InstrSection instrSect;
 	ValueSection varSect;
 };
 
@@ -132,10 +111,8 @@ typedef std::unique_ptr<Value>(*FunctionBridgeCall)(uint32_t parCount, ValueSect
 class FunctionBridgeValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	std::unique_ptr<Value> Copy() const;
-
-	FunctionBridgeValue(FunctionBridgeCall t_funcAddr);
+	explicit FunctionBridgeValue(FunctionBridgeCall t_funcAddr) noexcept;
 
 public:
 	FunctionBridgeCall funcAddr;
@@ -144,11 +121,9 @@ public:
 class FunctionProtoValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
-	FunctionProtoValue(FunctionBodyValue* t_value);
-	FunctionProtoValue(FunctionBridgeValue* t_value);
+	explicit FunctionProtoValue(FunctionBodyValue* t_value) noexcept;
+	explicit FunctionProtoValue(FunctionBridgeValue* t_value) noexcept;
 
 public:
 	union
@@ -163,10 +138,8 @@ public:
 class UpValue : public Value {
 public:
 	virtual ValueType GetType() const noexcept;
-
 	virtual std::unique_ptr<Value> Copy() const;
-
-	UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto);
+	UpValue(uint32_t t_index, FunctionBodyValue* t_funcProto) noexcept;
 
 public:
 	uint32_t index;

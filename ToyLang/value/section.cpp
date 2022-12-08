@@ -2,7 +2,7 @@
 
 #include "value/value.h"
 
-namespace value {
+namespace toylang {
 
 void ValueSection::Push(std::unique_ptr<Value>&& value) {
 	m_container.push_back(std::move(value));
@@ -28,7 +28,7 @@ void ValueSection::Set(int32_t index, std::unique_ptr<Value> value) {
 	Get(index) = std::move(value);
 }
 
-size_t ValueSection::Size() {
+size_t ValueSection::Size() const noexcept {
 	return m_container.size();
 }
 
@@ -36,7 +36,7 @@ void ValueSection::ReSize(size_t size) {
 	return m_container.resize(size);
 }
 
-void ValueSection::Clear() {
+void ValueSection::Clear() noexcept {
 	m_container.clear();
 }
 

@@ -1,6 +1,6 @@
 #include "lexer.h"
 
-namespace lexer {
+namespace toylang {
 
 LexerException::LexerException(const char* t_msg) : std::exception(t_msg) {
 
